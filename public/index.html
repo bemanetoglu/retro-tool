@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Tool - Ana Sayfa</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔄 Retro Tool</h1>
+            <p>Takım retrospektifleri için tasarlanmış araç</p>
+        </header>
+
+        <main>
+            <div class="action-cards">
+                <div class="card">
+                    <h2>🆕 Yeni Oda Oluştur</h2>
+                    <p>Yeni bir retrospektif odası oluşturun ve takım üyelerinizi davet edin</p>
+                    <a href="/create-room" class="btn btn-primary">Oda Oluştur</a>
+                </div>
+
+                <div class="card">
+                    <h2>🚪 Odaya Katıl</h2>
+                    <p>Mevcut bir odaya katılmak için oda kodunu girin</p>
+                    <form id="joinForm">
+                        <input type="text" id="roomCode" placeholder="Oda Kodu (6 haneli)" maxlength="6" required>
+                        <input type="text" id="username" placeholder="Kullanıcı Adınız" required>
+                        <button type="submit" class="btn btn-secondary">Katıl</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Mad, Sad, Glad formatında retrospektif toplantıları yapın</p>
+        </footer>
+    </div>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Hata</h3>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/index.js"></script>
+</body>
+</html> 

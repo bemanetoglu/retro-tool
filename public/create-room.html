@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Tool - Oda Oluştur</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🆕 Yeni Oda Oluştur</h1>
+            <a href="/" class="back-link">← Ana Sayfaya Dön</a>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="createRoomForm">
+                    <div class="form-group">
+                        <label for="roomName">Oda Adı *</label>
+                        <input type="text" id="roomName" placeholder="Örn: Sprint 5 Retro" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="participantLimit">Katılımcı Sınırı (Opsiyonel)</label>
+                        <input type="number" id="participantLimit" min="1" max="50" placeholder="Sınırsız için boş bırakın">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timeLimit">Zaman Sınırı (Dakika, Opsiyonel)</label>
+                        <input type="number" id="timeLimit" min="1" max="300" placeholder="Sınırsız için boş bırakın">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Oda Oluştur</button>
+                </form>
+            </div>
+        </main>
+
+        <div id="roomCreated" class="modal">
+            <div class="modal-content">
+                <h3>✅ Oda Oluşturuldu!</h3>
+                <div class="room-info">
+                    <div class="info-item">
+                        <label>Oda Kodu:</label>
+                        <div class="code-display" id="roomCode"></div>
+                    </div>
+                    <div class="info-item">
+                        <label>Davet Linki:</label>
+                        <div class="link-display">
+                            <input type="text" id="inviteLink" readonly>
+                            <button class="btn btn-small" onclick="copyLink()">Kopyala</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="joinRoom()">Odaya Geç</button>
+                    <button class="btn btn-secondary" onclick="goHome()">Ana Sayfa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Hata</h3>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/create-room.js"></script>
+</body>
+</html> 

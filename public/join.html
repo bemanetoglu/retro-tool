@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Tool - Odaya Katıl</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚪 Odaya Katıl</h1>
+            <a href="/" class="back-link">← Ana Sayfaya Dön</a>
+        </header>
+
+        <main>
+            <div class="form-container">
+                <form id="joinRoomForm">
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adınız *</label>
+                        <input type="text" id="username" placeholder="Adınızı girin" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Odaya Katıl</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Hata</h3>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/join.js"></script>
+</body>
+</html> 
