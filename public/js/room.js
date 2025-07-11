@@ -22,8 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial room data
     loadRoomData();
     
-    // Set up timer update
-    setInterval(updateTimer, 1000);
+    // Set up timer update (clear any existing interval first)
+    if (timeInterval) {
+        clearInterval(timeInterval);
+    }
+    timeInterval = setInterval(updateTimer, 1000);
 });
 
 // Initialize Socket.IO connection
@@ -60,12 +63,18 @@ function initializeSocket() {
     });
     
     socket.on('newEntry', function(data) {
-        addEntryToDOM(data.category, data.entry);
+        // Check if entry already exists in DOM to prevent duplicates
+        const existingEntry = document.querySelector(`[data-entry-id="${data.entry.id}"]`);
+        if (!existingEntry) {
+            addEntryToDOM(data.category, data.entry);
+        } else {
+            // Update existing entry if it exists
+            updateEntryInDOM(data.category, data.entry);
+        }
     });
     
-    socket.on('entryUnpublished', function(data) {
-        removeEntryFromDOM(data.category, data.entryId);
-    });
+    // entryUnpublished event handler removed - no longer needed
+    // Entry visibility is now handled by updateEntryInDOM function
     
     socket.on('participantUpdate', function(data) {
         updateParticipantCount(data.count, data.limit);
@@ -74,12 +83,15 @@ function initializeSocket() {
     
     socket.on('timeExtended', function(data) {
         RetroToolCommon.showSuccess('Zaman uzatıldı!');
-        // Will be updated by next timer tick
+        // Force refresh time from server
+        timeRemaining = null; // This will allow server time to be set
+        loadRoomData();
     });
     
     socket.on('roomReopened', function() {
         RetroToolCommon.showSuccess('Oda yeniden açıldı!');
-        // Refresh room data
+        // Force refresh time from server (room reopen removes time limit)
+        timeRemaining = null;
         loadRoomData();
     });
     
@@ -107,20 +119,15 @@ async function loadRoomData() {
         // Update room info
         document.getElementById('roomName').textContent = room.name;
         isCreator = room.isCreator;
-        timeRemaining = room.timeRemaining;
         
-        // Store current username for entry comparison
-        // Try to get from participants first, then from entries
-        if (room.participants && room.participants.length > 0) {
-            const currentUser = room.participants.find(p => p.isCreator === room.isCreator);
-            if (currentUser) {
-                window.currentUsername = currentUser.username;
-            } else {
-                window.currentUsername = await getCurrentUsernameFromParticipants();
-            }
-        } else {
-            window.currentUsername = getCurrentUsernameFromEntries(room.entries);
+        // Only update timeRemaining if it's not already set or if it's significantly different
+        // This prevents server refreshes from disrupting the local timer
+        if (timeRemaining === null || Math.abs(timeRemaining - room.timeRemaining) > 5000) {
+            timeRemaining = room.timeRemaining;
         }
+        
+        // Store current username from server response
+        window.currentUsername = room.currentUsername;
         
         // Show creator actions if user is creator
         if (isCreator) {
@@ -197,17 +204,24 @@ function addEntryToDOM(category, entry, isInitial = false) {
     // Check if this is current user's entry
     const isOwnEntry = entry.username === getCurrentUsername();
     
+    // Debug logging removed
+    
+    // If this is not user's own entry and it's not published, don't show it
+    if (!isOwnEntry && !entry.published) {
+        entryElement.style.display = 'none';
+    }
+    
     // Add draft/published styling
     let publishButton = '';
     let draftIndicator = '';
     
     if (isOwnEntry) {
-        if (entry.draft) {
-            entryElement.classList.add('draft');
-            draftIndicator = '<span class="draft-indicator">📝 Taslak</span>';
-        } else {
+        if (entry.published) {
             entryElement.classList.add('published');
             draftIndicator = '<span class="published-indicator">✅ Yayınlandı</span>';
+        } else {
+            entryElement.classList.add('draft');
+            draftIndicator = '<span class="draft-indicator">📝 Taslak</span>';
         }
         
         publishButton = `
@@ -257,6 +271,72 @@ function removeEntryFromDOM(category, entryId) {
     }
 }
 
+// Update existing entry in DOM
+function updateEntryInDOM(category, entry) {
+    const entryElement = document.querySelector(`[data-entry-id="${entry.id}"]`);
+    if (!entryElement) return;
+    
+    // Check if this is current user's entry
+    const isOwnEntry = entry.username === getCurrentUsername();
+    
+    // If this is not user's own entry and it's not published, hide it
+    if (!isOwnEntry && !entry.published) {
+        entryElement.style.display = 'none';
+        return;
+    } else {
+        entryElement.style.display = 'block';
+    }
+    
+    // Update entry classes
+    entryElement.classList.remove('draft', 'published');
+    if (entry.selected) {
+        entryElement.classList.add('selected');
+    } else {
+        entryElement.classList.remove('selected');
+    }
+    
+    // Update draft/published styling
+    if (isOwnEntry) {
+        if (entry.published) {
+            entryElement.classList.add('published');
+        } else {
+            entryElement.classList.add('draft');
+        }
+        
+        // Update publish button and indicator
+        const publishBtn = entryElement.querySelector('.publish-btn');
+        const draftIndicator = entryElement.querySelector('.draft-indicator, .published-indicator');
+        
+        if (publishBtn) {
+            if (entry.published) {
+                publishBtn.textContent = '🔓 Geri Al';
+                publishBtn.classList.remove('draft');
+                publishBtn.classList.add('published');
+            } else {
+                publishBtn.textContent = '📢 Yayınla';
+                publishBtn.classList.remove('published');
+                publishBtn.classList.add('draft');
+            }
+        }
+        
+        if (draftIndicator) {
+            if (entry.published) {
+                draftIndicator.textContent = '✅ Yayınlandı';
+                draftIndicator.className = 'published-indicator';
+            } else {
+                draftIndicator.textContent = '📝 Taslak';
+                draftIndicator.className = 'draft-indicator';
+            }
+        }
+    }
+    
+    // Update checkbox state for creators
+    const checkbox = entryElement.querySelector('.entry-checkbox');
+    if (checkbox) {
+        checkbox.checked = entry.selected;
+    }
+}
+
 // Get current username from session
 function getCurrentUsername() {
     // We'll store the username when the page loads
@@ -270,43 +350,11 @@ async function togglePublish(category, entryId, isCurrentlyPublished) {
             method: 'POST'
         });
         
-        // Update the entry in DOM
-        const entryElement = document.querySelector(`[data-entry-id="${entryId}"]`);
-        if (entryElement) {
-            const publishBtn = entryElement.querySelector('.publish-btn');
-            const draftIndicator = entryElement.querySelector('.draft-indicator, .published-indicator');
-            
-            if (response.published) {
-                // Now published
-                publishBtn.textContent = '🔓 Geri Al';
-                publishBtn.classList.remove('draft');
-                publishBtn.classList.add('published');
-                
-                if (draftIndicator) {
-                    draftIndicator.textContent = '✅ Yayınlandı';
-                    draftIndicator.className = 'published-indicator';
-                }
-                
-                entryElement.classList.remove('draft');
-                entryElement.classList.add('published');
-                
-                RetroToolCommon.showSuccess('Giriş yayınlandı!');
-            } else {
-                // Now draft
-                publishBtn.textContent = '📢 Yayınla';
-                publishBtn.classList.remove('published');
-                publishBtn.classList.add('draft');
-                
-                if (draftIndicator) {
-                    draftIndicator.textContent = '📝 Taslak';
-                    draftIndicator.className = 'draft-indicator';
-                }
-                
-                entryElement.classList.remove('published');
-                entryElement.classList.add('draft');
-                
-                RetroToolCommon.showSuccess('Giriş taslağa alındı!');
-            }
+        // Socket eventi DOM'u güncelleyecek, burada sadece başarı mesajı gösterelim
+        if (response.published) {
+            RetroToolCommon.showSuccess('Giriş yayınlandı!');
+        } else {
+            RetroToolCommon.showSuccess('Giriş taslağa alındı!');
         }
         
     } catch (error) {
@@ -358,8 +406,13 @@ function updateTimer() {
         timeRemaining -= 1000;
         
         if (timeRemaining <= 0) {
+            timeRemaining = 0;
             RetroToolCommon.showModal('timeExpiredModal');
         }
+    } else if (timeRemaining === null) {
+        // If no time limit, don't show timer
+        const timeElement = document.getElementById('timeRemaining');
+        timeElement.textContent = '';
     }
 }
 
@@ -466,8 +519,8 @@ async function extendTime() {
             })
         });
         
-        // Refresh room data to get updated time
-        loadRoomData();
+        // Don't refresh room data, let socket events handle updates
+        // loadRoomData(); // Removed to prevent timer disruption
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -487,8 +540,8 @@ async function reopenRoom() {
             method: 'POST'
         });
         
-        // Refresh room data
-        loadRoomData();
+        // Don't refresh room data, socket event will handle it
+        // loadRoomData(); // Removed to prevent timer disruption
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -510,8 +563,8 @@ async function terminateRoom() {
         
         RetroToolCommon.showSuccess('Retrospektif sonlandırıldı');
         
-        // Refresh room data
-        loadRoomData();
+        // Don't refresh room data, socket event will handle it
+        // loadRoomData(); // Removed to prevent timer disruption
         
     } catch (error) {
         RetroToolCommon.showError(error.message);

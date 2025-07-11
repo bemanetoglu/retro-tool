@@ -248,7 +248,8 @@ app.get('/api/room/:code', (req, res) => {
       reopened: room.reopened,
       terminated: room.terminated || false,
       participants: participants,
-      shouldShowAllEntries: shouldShowAllEntries
+      shouldShowAllEntries: shouldShowAllEntries,
+      currentUsername: userSession.username // Add current user's username
     }
   });
 });
@@ -538,13 +539,9 @@ app.post('/api/room/:code/entry/:id/publish', (req, res) => {
   foundEntry.published = !foundEntry.published;
   foundEntry.draft = !foundEntry.published;
   
-  // Broadcast to all participants only if entry is now published
-  if (foundEntry.published) {
-    io.to(code).emit('newEntry', { category: entryCategory, entry: foundEntry });
-  } else {
-    // If unpublished, notify others to remove it
-    io.to(code).emit('entryUnpublished', { category: entryCategory, entryId: foundEntry.id });
-  }
+  // Always broadcast the updated entry to all participants
+  // The frontend will handle visibility based on published status
+  io.to(code).emit('newEntry', { category: entryCategory, entry: foundEntry });
   
   res.json({ success: true, published: foundEntry.published });
 });
