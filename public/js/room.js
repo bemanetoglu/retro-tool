@@ -27,8 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
         clearInterval(timeInterval);
         timeInterval = null;
     }
-    // Update timer from server every 5 seconds
-    timeInterval = setInterval(updateTimerFromServer, 5000);
+    // Update timer from server every 1 second
+    timeInterval = setInterval(updateTimerFromServer, 1000);
 });
 
 // Clean up timer when leaving page

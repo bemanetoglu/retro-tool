@@ -86,18 +86,18 @@ const tr = {
     "generic_error": "Bir hata oluştu. Lütfen tekrar deneyin.",
     
     // Retro categories
-    "mad": "😡 Mad",
-    "sad": "😔 Sad", 
-    "glad": "😊 Glad",
+    "mad": "Mad",
+    "sad": "Sad", 
+    "glad": "Glad",
     "mad_placeholder": "Neyi kötü buldunuz?",
     "sad_placeholder": "Neyi üzücü buldunuz?",
     "glad_placeholder": "Neyi iyi buldunuz?",
     
     // Entry management
-    "draft": "📝 Taslak",
-    "published": "✅ Yayınlandı",
-    "publish": "📢 Yayınla",
-    "unpublish": "🔓 Geri Al",
+    "draft": "Taslak",
+    "published": "Yayınlandı",
+    "publish": "Yayınla",
+    "unpublish": "Geri Al",
     "entry_published": "Giriş yayınlandı!",
     "entry_unpublished": "Giriş taslağa alındı!",
     "select_all": "Tümünü Seç",
@@ -124,6 +124,7 @@ const tr = {
     "room_terminated": "Retrospektif sonlandırıldı",
     "excel_downloaded": "Excel dosyası indirildi!",
     "export_failed": "Export başarısız:",
+    "no_selected_entries": "Seçili ve yayınlanmış giriş yok",
     
     // Errors
     "invalid_room_link": "Geçersiz oda linki",

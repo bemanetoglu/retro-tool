@@ -86,18 +86,18 @@ const es = {
     "generic_error": "Ocurrió un error. Por favor, inténtelo de nuevo.",
     
     // Retro categories
-    "mad": "😡 Enfadado",
-    "sad": "😔 Triste",
-    "glad": "😊 Contento",
+    "mad": "Enfadado",
+    "sad": "Triste",
+    "glad": "Contento",
     "mad_placeholder": "¿Qué te enfadó?",
     "sad_placeholder": "¿Qué te entristeció?",
     "glad_placeholder": "¿Qué te alegró?",
     
     // Entry management
-    "draft": "📝 Borrador",
-    "published": "✅ Publicado",
-    "publish": "📢 Publicar",
-    "unpublish": "🔓 Despublicar",
+    "draft": "Borrador",
+    "published": "Publicado",
+    "publish": "Publicar",
+    "unpublish": "Despublicar",
     "entry_published": "¡Entrada publicada!",
     "entry_unpublished": "¡Entrada movida a borrador!",
     "select_all": "Seleccionar Todo",
@@ -124,6 +124,7 @@ const es = {
     "room_terminated": "Retrospectiva terminada",
     "excel_downloaded": "¡Archivo Excel descargado!",
     "export_failed": "Exportación falló:",
+    "no_selected_entries": "No hay entradas seleccionadas y publicadas",
     
     // Errors
     "invalid_room_link": "Enlace de sala inválido",

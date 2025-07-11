@@ -505,6 +505,11 @@ app.get('/api/room/:code/export', async (req, res) => {
     
     console.log('Total exported entries (selected AND published):', totalExportedEntries);
     
+    // Check if there are any entries to export
+    if (totalExportedEntries === 0) {
+      return res.status(400).json({ error: 'Seçili ve yayınlanmış giriş yok' });
+    }
+    
     // Style the header
     worksheet.getRow(1).font = { bold: true, size: 14 };
     worksheet.getRow(3).font = { bold: true };

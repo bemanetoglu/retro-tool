@@ -86,18 +86,18 @@ const en = {
     "generic_error": "An error occurred. Please try again.",
     
     // Retro categories
-    "mad": "😡 Mad",
-    "sad": "😔 Sad",
-    "glad": "😊 Glad",
+    "mad": "Mad",
+    "sad": "Sad",
+    "glad": "Glad",
     "mad_placeholder": "What made you angry?",
     "sad_placeholder": "What made you sad?",
     "glad_placeholder": "What made you happy?",
     
     // Entry management
-    "draft": "📝 Draft",
-    "published": "✅ Published",
-    "publish": "📢 Publish",
-    "unpublish": "🔓 Unpublish",
+    "draft": "Draft",
+    "published": "Published",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
     "entry_published": "Entry published!",
     "entry_unpublished": "Entry moved to draft!",
     "select_all": "Select All",
@@ -124,6 +124,7 @@ const en = {
     "room_terminated": "Retrospective terminated",
     "excel_downloaded": "Excel file downloaded!",
     "export_failed": "Export failed:",
+    "no_selected_entries": "No selected and published entries",
     
     // Errors
     "invalid_room_link": "Invalid room link",

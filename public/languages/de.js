@@ -86,18 +86,18 @@ const de = {
     "generic_error": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
     
     // Retro categories
-    "mad": "😡 Verärgert",
-    "sad": "😔 Traurig",
-    "glad": "😊 Froh",
+    "mad": "Verärgert",
+    "sad": "Traurig",
+    "glad": "Froh",
     "mad_placeholder": "Was hat Sie verärgert?",
     "sad_placeholder": "Was hat Sie traurig gemacht?",
     "glad_placeholder": "Was hat Sie gefreut?",
     
     // Entry management
-    "draft": "📝 Entwurf",
-    "published": "✅ Veröffentlicht",
-    "publish": "📢 Veröffentlichen",
-    "unpublish": "🔓 Zurückziehen",
+    "draft": "Entwurf",
+    "published": "Veröffentlicht",
+    "publish": "Veröffentlichen",
+    "unpublish": "Zurückziehen",
     "entry_published": "Eintrag veröffentlicht!",
     "entry_unpublished": "Eintrag als Entwurf gespeichert!",
     "select_all": "Alle auswählen",
@@ -124,6 +124,7 @@ const de = {
     "room_terminated": "Retrospektive beendet",
     "excel_downloaded": "Excel-Datei heruntergeladen!",
     "export_failed": "Export fehlgeschlagen:",
+    "no_selected_entries": "Keine ausgewählten und veröffentlichten Einträge",
     
     // Errors
     "invalid_room_link": "Ungültiger Raumlink",
