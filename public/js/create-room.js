@@ -18,21 +18,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate room name
         if (!RetroToolCommon.validateInput(roomName, 2, 50)) {
-            RetroToolCommon.showError('Oda adı 2-50 karakter arasında olmalıdır');
+            RetroToolCommon.showError(RetroToolCommon.getText('room_name_length_error', 'Oda adı 2-50 karakter arasında olmalıdır'));
             roomNameInput.focus();
             return;
         }
         
         // Validate participant limit if provided
         if (participantLimit && (parseInt(participantLimit) < 1 || parseInt(participantLimit) > 50)) {
-            RetroToolCommon.showError('Katılımcı sınırı 1-50 arasında olmalıdır');
+            RetroToolCommon.showError(RetroToolCommon.getText('participant_limit_error', 'Katılımcı sınırı 1-50 arasında olmalıdır'));
             participantLimitInput.focus();
             return;
         }
         
         // Validate time limit if provided
         if (timeLimit && (parseInt(timeLimit) < 1 || parseInt(timeLimit) > 300)) {
-            RetroToolCommon.showError('Zaman sınırı 1-300 dakika arasında olmalıdır');
+            RetroToolCommon.showError(RetroToolCommon.getText('time_limit_error', 'Zaman sınırı 1-300 dakika arasında olmalıdır'));
             timeLimitInput.focus();
             return;
         }
@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             RetroToolCommon.setRoomCreator(true);
             
             // Store creator username
-            RetroToolCommon.storeUsername('Oda Sahibi');
+            RetroToolCommon.storeUsername(RetroToolCommon.getText('room_owner', 'Oda Sahibi'));
             
             // Show success modal
             RetroToolCommon.showModal('roomCreated');
@@ -178,12 +178,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const counter = document.createElement('small');
     counter.style.color = '#718096';
     counter.style.fontSize = '0.8rem';
-    counter.textContent = '0/50 karakter';
+    counter.textContent = '0/50 ' + RetroToolCommon.getText('characters', 'karakter');
     roomNameGroup.appendChild(counter);
     
     roomNameInput.addEventListener('input', function() {
         const length = this.value.length;
-        counter.textContent = `${length}/50 karakter`;
+        counter.textContent = `${length}/50 ${RetroToolCommon.getText('characters', 'karakter')}`;
         
         if (length > 50) {
             counter.style.color = '#f56565';

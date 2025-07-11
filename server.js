@@ -320,8 +320,15 @@ app.post('/api/room/:code/extend-time', (req, res) => {
 
   room.timeLimit += additionalMinutes || 15;
   
+  // Calculate new time remaining
+  const now = Date.now();
+  const timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt));
+  
   // Broadcast to all participants
-  io.to(code).emit('timeExtended', { newTimeLimit: room.timeLimit });
+  io.to(code).emit('timeExtended', { 
+    newTimeLimit: room.timeLimit,
+    timeRemaining: timeRemaining
+  });
   
   res.json({ success: true });
 });
@@ -389,6 +396,37 @@ app.get('/api/room/:code/participants', (req, res) => {
   }
 
   res.json({ participants });
+});
+
+app.get('/api/room/:code/timer', (req, res) => {
+  const code = req.params.code;
+  
+  const room = rooms.get(code);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  const userSession = userSessions.get(req.session.id);
+  if (!userSession || userSession.roomCode !== code) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const now = Date.now();
+  let timeRemaining = room.timeLimit ? 
+    Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt)) : null;
+  
+  // If room is terminated or reopened, handle accordingly
+  if (room.terminated) {
+    timeRemaining = 0;
+  } else if (room.reopened) {
+    timeRemaining = null;
+  }
+
+  res.json({ 
+    timeRemaining: timeRemaining,
+    terminated: room.terminated || false,
+    reopened: room.reopened || false
+  });
 });
 
 app.post('/api/room/:code/toggle-entry', (req, res) => {

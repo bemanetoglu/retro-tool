@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     roomCode = RetroToolCommon.getCurrentRoomCode();
     
     if (!roomCode) {
-        RetroToolCommon.showError('Geçersiz oda linki');
+        RetroToolCommon.showError(RetroToolCommon.getText('invalid_room_link', 'Geçersiz oda linki'));
         setTimeout(() => {
             RetroToolCommon.goHome();
         }, 2000);
@@ -22,11 +22,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load initial room data
     loadRoomData();
     
-    // Set up timer update (clear any existing interval first)
+    // Set up timer update from server (clear any existing interval first)
     if (timeInterval) {
         clearInterval(timeInterval);
+        timeInterval = null;
     }
-    timeInterval = setInterval(updateTimer, 1000);
+    // Update timer from server every 5 seconds
+    timeInterval = setInterval(updateTimerFromServer, 5000);
+});
+
+// Clean up timer when leaving page
+window.addEventListener('beforeunload', function() {
+    if (timeInterval) {
+        clearInterval(timeInterval);
+        timeInterval = null;
+    }
 });
 
 // Initialize Socket.IO connection
@@ -50,7 +60,7 @@ function initializeSocket() {
     
     socket.on('error', function(error) {
         console.error('Socket error:', error);
-        RetroToolCommon.showError('Bağlantı hatası: ' + error);
+        RetroToolCommon.showError(RetroToolCommon.getText('connection_error', 'Bağlantı hatası') + ': ' + error);
     });
     
     socket.on('roomState', function(data) {
@@ -82,17 +92,19 @@ function initializeSocket() {
     });
     
     socket.on('timeExtended', function(data) {
-        RetroToolCommon.showSuccess('Zaman uzatıldı!');
-        // Force refresh time from server
-        timeRemaining = null; // This will allow server time to be set
-        loadRoomData();
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('time_extended', 'Zaman uzatıldı!'));
+        // Update timer directly from socket data
+        if (data.timeRemaining) {
+            timeRemaining = data.timeRemaining;
+        }
     });
     
     socket.on('roomReopened', function() {
-        RetroToolCommon.showSuccess('Oda yeniden açıldı!');
-        // Force refresh time from server (room reopen removes time limit)
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('room_reopened', 'Oda yeniden açıldı!'));
+        // Room reopen removes time limit
         timeRemaining = null;
-        loadRoomData();
+        const timeElement = document.getElementById('timeRemaining');
+        timeElement.textContent = '';
     });
     
     socket.on('entryToggled', function(data) {
@@ -101,6 +113,14 @@ function initializeSocket() {
     
     socket.on('roomTerminated', function() {
         RetroToolCommon.showModal('terminatedModal');
+        // Stop the timer
+        if (timeInterval) {
+            clearInterval(timeInterval);
+            timeInterval = null;
+        }
+        timeRemaining = 0;
+        updateTimer();
+        
         // Disable all input fields
         document.querySelectorAll('textarea, button').forEach(el => {
             if (!el.classList.contains('modal') && !el.closest('.modal')) {
@@ -122,7 +142,7 @@ async function loadRoomData() {
         
         // Only update timeRemaining if it's not already set or if it's significantly different
         // This prevents server refreshes from disrupting the local timer
-        if (timeRemaining === null || Math.abs(timeRemaining - room.timeRemaining) > 5000) {
+        if (timeRemaining === null || (room.timeRemaining && Math.abs(timeRemaining - room.timeRemaining) > 10000)) {
             timeRemaining = room.timeRemaining;
         }
         
@@ -141,6 +161,14 @@ async function loadRoomData() {
         // Check if room is terminated
         if (room.terminated) {
             RetroToolCommon.showModal('terminatedModal');
+            // Stop the timer
+            if (timeInterval) {
+                clearInterval(timeInterval);
+                timeInterval = null;
+            }
+            timeRemaining = 0;
+            updateTimer();
+            
             // Disable all input fields
             document.querySelectorAll('textarea, button').forEach(el => {
                 if (!el.classList.contains('modal') && !el.closest('.modal')) {
@@ -161,12 +189,12 @@ async function loadRoomData() {
         
         // If user is not authenticated (hasn't joined), redirect to join page
         if (error.message.includes('Access denied') || error.message.includes('403')) {
-            RetroToolCommon.showError('Önce odaya katılmanız gerekiyor');
+            RetroToolCommon.showError(RetroToolCommon.getText('access_denied', 'Önce odaya katılmanız gerekiyor'));
             setTimeout(() => {
                 window.location.href = `/join/${roomCode}`;
             }, 2000);
         } else {
-            RetroToolCommon.showError('Oda verileri yüklenirken hata oluştu');
+            RetroToolCommon.showError(RetroToolCommon.getText('room_data_error', 'Oda verileri yüklenirken hata oluştu'));
             setTimeout(() => {
                 RetroToolCommon.goHome();
             }, 3000);
@@ -218,16 +246,16 @@ function addEntryToDOM(category, entry, isInitial = false) {
     if (isOwnEntry) {
         if (entry.published) {
             entryElement.classList.add('published');
-            draftIndicator = '<span class="published-indicator">✅ Yayınlandı</span>';
+            draftIndicator = '<span class="published-indicator">✅ ' + RetroToolCommon.getText('published', 'Yayınlandı') + '</span>';
         } else {
             entryElement.classList.add('draft');
-            draftIndicator = '<span class="draft-indicator">📝 Taslak</span>';
+            draftIndicator = '<span class="draft-indicator">📝 ' + RetroToolCommon.getText('draft', 'Taslak') + '</span>';
         }
         
         publishButton = `
             <button class="publish-btn ${entry.published ? 'published' : 'draft'}" 
                     onclick="togglePublish('${category}', '${entry.id}', ${entry.published})">
-                ${entry.published ? '🔓 Geri Al' : '📢 Yayınla'}
+                ${entry.published ? '🔓 ' + RetroToolCommon.getText('unpublish', 'Geri Al') : '📢 ' + RetroToolCommon.getText('publish', 'Yayınla')}
             </button>
         `;
     }
@@ -309,11 +337,11 @@ function updateEntryInDOM(category, entry) {
         
         if (publishBtn) {
             if (entry.published) {
-                publishBtn.textContent = '🔓 Geri Al';
+                publishBtn.textContent = '🔓 ' + RetroToolCommon.getText('unpublish', 'Geri Al');
                 publishBtn.classList.remove('draft');
                 publishBtn.classList.add('published');
             } else {
-                publishBtn.textContent = '📢 Yayınla';
+                publishBtn.textContent = '📢 ' + RetroToolCommon.getText('publish', 'Yayınla');
                 publishBtn.classList.remove('published');
                 publishBtn.classList.add('draft');
             }
@@ -321,10 +349,10 @@ function updateEntryInDOM(category, entry) {
         
         if (draftIndicator) {
             if (entry.published) {
-                draftIndicator.textContent = '✅ Yayınlandı';
+                draftIndicator.textContent = '✅ ' + RetroToolCommon.getText('published', 'Yayınlandı');
                 draftIndicator.className = 'published-indicator';
             } else {
-                draftIndicator.textContent = '📝 Taslak';
+                draftIndicator.textContent = '📝 ' + RetroToolCommon.getText('draft', 'Taslak');
                 draftIndicator.className = 'draft-indicator';
             }
         }
@@ -352,9 +380,9 @@ async function togglePublish(category, entryId, isCurrentlyPublished) {
         
         // Socket eventi DOM'u güncelleyecek, burada sadece başarı mesajı gösterelim
         if (response.published) {
-            RetroToolCommon.showSuccess('Giriş yayınlandı!');
+            RetroToolCommon.showSuccess(RetroToolCommon.getText('entry_published', 'Giriş yayınlandı!'));
         } else {
-            RetroToolCommon.showSuccess('Giriş taslağa alındı!');
+            RetroToolCommon.showSuccess(RetroToolCommon.getText('entry_unpublished', 'Giriş taslağa alındı!'));
         }
         
     } catch (error) {
@@ -367,9 +395,9 @@ function updateParticipantCount(count, limit) {
     const participantElement = document.getElementById('participantCount');
     
     if (limit) {
-        participantElement.textContent = `👥 ${count}/${limit} katılımcı`;
+        participantElement.textContent = `👥 ${count}/${limit} ${RetroToolCommon.getText('participants_count', 'katılımcı')}`;
     } else {
-        participantElement.textContent = `👥 ${count} katılımcı`;
+        participantElement.textContent = `👥 ${count} ${RetroToolCommon.getText('participants_count', 'katılımcı')}`;
     }
 }
 
@@ -378,7 +406,7 @@ function updateParticipantsList(participants) {
     const participantsList = document.getElementById('participantsList');
     
     if (!participants || participants.length === 0) {
-        participantsList.innerHTML = '<div class="participant-item">Henüz katılımcı yok</div>';
+        participantsList.innerHTML = '<div class="participant-item">' + RetroToolCommon.getText('no_participants', 'Henüz katılımcı yok') + '</div>';
         return;
     }
     
@@ -391,28 +419,50 @@ function updateParticipantsList(participants) {
         participantItem.innerHTML = `
             <span class="participant-icon">${participant.isCreator ? '👑' : '👤'}</span>
             <span class="participant-name">${RetroToolCommon.sanitizeHTML(participant.username)}</span>
-            ${participant.isCreator ? '<span class="creator-badge">Sahip</span>' : ''}
+            ${participant.isCreator ? '<span class="creator-badge">' + RetroToolCommon.getText('room_owner', 'Sahip') + '</span>' : ''}
         `;
         
         participantsList.appendChild(participantItem);
     });
 }
 
-// Update timer display
+// Update timer display - now server-side driven
 function updateTimer() {
+    // Only update display, don't countdown locally
     if (timeRemaining !== null && timeRemaining > 0) {
         const timeElement = document.getElementById('timeRemaining');
         timeElement.textContent = RetroToolCommon.formatTimeRemaining(timeRemaining);
-        timeRemaining -= 1000;
-        
-        if (timeRemaining <= 0) {
-            timeRemaining = 0;
-            RetroToolCommon.showModal('timeExpiredModal');
-        }
     } else if (timeRemaining === null) {
         // If no time limit, don't show timer
         const timeElement = document.getElementById('timeRemaining');
         timeElement.textContent = '';
+    } else if (timeRemaining === 0) {
+        // Time expired
+        const timeElement = document.getElementById('timeRemaining');
+        timeElement.textContent = '';
+        RetroToolCommon.showModal('timeExpiredModal');
+    }
+}
+
+// Update timer from server
+async function updateTimerFromServer() {
+    try {
+        const response = await RetroToolCommon.apiRequest(`/api/room/${roomCode}/timer`);
+        if (response.timeRemaining !== timeRemaining) {
+            timeRemaining = response.timeRemaining;
+            updateTimer();
+        }
+        
+        // If room is terminated, stop the timer
+        if (response.terminated) {
+            clearInterval(timeInterval);
+            timeInterval = null;
+            timeRemaining = 0;
+            updateTimer();
+        }
+    } catch (error) {
+        // Silent fail - timer will continue with current value
+        console.warn('Failed to update timer from server:', error);
     }
 }
 
@@ -423,18 +473,18 @@ async function addEntry(category) {
     
     // Check if input is disabled (room terminated)
     if (input.disabled) {
-        RetroToolCommon.showError('Retrospektif sonlandırıldı, yeni giriş yapılamaz');
+        RetroToolCommon.showError(RetroToolCommon.getText('retro_terminated', 'Retrospektif sonlandırıldı, yeni giriş yapılamaz'));
         return;
     }
     
     if (!text) {
-        RetroToolCommon.showError('Lütfen bir metin girin');
+        RetroToolCommon.showError(RetroToolCommon.getText('enter_text', 'Lütfen bir metin girin'));
         input.focus();
         return;
     }
     
     if (text.length > 500) {
-        RetroToolCommon.showError('Metin 500 karakterden uzun olamaz');
+        RetroToolCommon.showError(RetroToolCommon.getText('text_too_long', 'Metin 500 karakterden uzun olamaz'));
         input.focus();
         return;
     }
@@ -499,15 +549,22 @@ function updateEntrySelection(category, entryId, selected) {
 }
 
 // Extend time (creator only)
-async function extendTime() {
+function extendTime() {
     if (!isCreator) return;
     
-    const additionalMinutes = prompt('Kaç dakika eklemek istiyorsunuz?', '15');
-    if (!additionalMinutes) return;
+    RetroToolCommon.showModal('extendTimeModal');
+    const input = document.getElementById('extendTimeInput');
+    input.focus();
+}
+
+// Confirm extend time
+async function confirmExtendTime() {
+    const input = document.getElementById('extendTimeInput');
+    const minutes = parseInt(input.value);
     
-    const minutes = parseInt(additionalMinutes);
     if (isNaN(minutes) || minutes < 1 || minutes > 60) {
-        RetroToolCommon.showError('Geçerli bir dakika değeri girin (1-60)');
+        RetroToolCommon.showError(RetroToolCommon.getText('extend_time_invalid', 'Geçerli bir dakika değeri girin (1-60)'));
+        input.focus();
         return;
     }
     
@@ -519,8 +576,7 @@ async function extendTime() {
             })
         });
         
-        // Don't refresh room data, let socket events handle updates
-        // loadRoomData(); // Removed to prevent timer disruption
+        RetroToolCommon.closeModal('extendTimeModal');
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -528,20 +584,20 @@ async function extendTime() {
 }
 
 // Reopen room (creator only)
-async function reopenRoom() {
+function reopenRoom() {
     if (!isCreator) return;
     
-    if (!confirm('Odayı yeniden açmak istediğinizden emin misiniz? Bu durumda zaman sınırı kaldırılacaktır.')) {
-        return;
-    }
-    
+    RetroToolCommon.showModal('reopenRoomModal');
+}
+
+// Confirm reopen room
+async function confirmReopenRoom() {
     try {
         await RetroToolCommon.apiRequest(`/api/room/${roomCode}/reopen`, {
             method: 'POST'
         });
         
-        // Don't refresh room data, socket event will handle it
-        // loadRoomData(); // Removed to prevent timer disruption
+        RetroToolCommon.closeModal('reopenRoomModal');
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -549,22 +605,21 @@ async function reopenRoom() {
 }
 
 // Terminate room (creator only)
-async function terminateRoom() {
+function terminateRoom() {
     if (!isCreator) return;
     
-    if (!confirm('Retrospektifi sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm katılımcılar için giriş engellenecektir.')) {
-        return;
-    }
-    
+    RetroToolCommon.showModal('terminateRoomModal');
+}
+
+// Confirm terminate room
+async function confirmTerminateRoom() {
     try {
         await RetroToolCommon.apiRequest(`/api/room/${roomCode}/terminate`, {
             method: 'POST'
         });
         
-        RetroToolCommon.showSuccess('Retrospektif sonlandırıldı');
-        
-        // Don't refresh room data, socket event will handle it
-        // loadRoomData(); // Removed to prevent timer disruption
+        RetroToolCommon.closeModal('terminateRoomModal');
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('room_terminated', 'Retrospektif sonlandırıldı'));
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -579,7 +634,7 @@ async function exportSelected() {
         const response = await fetch(`/api/room/${roomCode}/export`);
         
         if (!response.ok) {
-            throw new Error('Export failed');
+            throw new Error(RetroToolCommon.getText('export_failed', 'Export başarısız'));
         }
         
         // Create download link
@@ -593,10 +648,10 @@ async function exportSelected() {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        RetroToolCommon.showSuccess('Excel dosyası indirildi!');
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('excel_downloaded', 'Excel dosyası indirildi!'));
         
     } catch (error) {
-        RetroToolCommon.showError('Export başarısız: ' + error.message);
+        RetroToolCommon.showError(RetroToolCommon.getText('export_failed', 'Export başarısız') + ': ' + error.message);
     }
 }
 

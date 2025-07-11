@@ -51,16 +51,16 @@ function formatTimeRemaining(milliseconds) {
     const seconds = Math.floor((milliseconds % 60000) / 1000);
     
     if (minutes > 0) {
-        return `${minutes}:${seconds.toString().padStart(2, '0')} kalan`;
+        return `${minutes}:${seconds.toString().padStart(2, '0')} ${getText('time_remaining', 'kalan')}`;
     } else {
-        return `${seconds}s kalan`;
+        return `${seconds}s ${getText('time_remaining', 'kalan')}`;
     }
 }
 
 // Show loading state
 function showLoading(button) {
     const originalText = button.textContent;
-    button.textContent = 'Yükleniyor...';
+    button.textContent = getText('loading', 'Yükleniyor...');
     button.disabled = true;
     
     return function() {
@@ -100,12 +100,12 @@ function fallbackCopyTextToClipboard(text) {
     try {
         const successful = document.execCommand('copy');
         if (successful) {
-            showSuccess('Panoya kopyalandı!');
+            showSuccess(getText('copied_to_clipboard', 'Panoya kopyalandı!'));
         } else {
-            showError('Kopyalama başarısız');
+            showError(getText('copy_failed', 'Kopyalama başarısız'));
         }
     } catch (err) {
-        showError('Kopyalama hatası');
+        showError(getText('copy_error', 'Kopyalama hatası'));
     }
     
     document.body.removeChild(textArea);
@@ -157,13 +157,13 @@ async function apiRequest(url, options = {}) {
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Bilinmeyen hata');
+            throw new Error(data.error || getText('unknown_error', 'Bilinmeyen hata'));
         }
         
         return data;
     } catch (error) {
         if (error.name === 'NetworkError' || error.name === 'TypeError') {
-            throw new Error('Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.');
+            throw new Error(getText('network_error', 'Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.'));
         }
         throw error;
     }
@@ -198,11 +198,11 @@ function handleFormError(error, formElement) {
     const submitButton = formElement.querySelector('button[type="submit"]');
     if (submitButton) {
         submitButton.disabled = false;
-        submitButton.textContent = submitButton.dataset.originalText || 'Gönder';
+        submitButton.textContent = submitButton.dataset.originalText || getText('submit', 'Gönder');
     }
     
     // Show error message
-    showError(error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+    showError(error.message || getText('generic_error', 'Bir hata oluştu. Lütfen tekrar deneyin.'));
 }
 
 // Get current room code from URL
@@ -267,6 +267,136 @@ document.addEventListener('keypress', function(event) {
     }
 });
 
+// Language management
+let currentLanguage = 'tr'; // Default language
+let translations = {};
+
+// Available languages
+const availableLanguages = {
+    'tr': 'Türkçe',
+    'en': 'English',
+    'de': 'Deutsch',
+    'es': 'Español'
+};
+
+// Initialize language system
+function initializeLanguage() {
+    // Try to get language from localStorage
+    const savedLanguage = localStorage.getItem('language');
+    if (savedLanguage && availableLanguages[savedLanguage]) {
+        currentLanguage = savedLanguage;
+    } else {
+        // Auto-detect browser language
+        const browserLanguage = navigator.language.split('-')[0];
+        if (availableLanguages[browserLanguage]) {
+            currentLanguage = browserLanguage;
+        }
+    }
+    
+    loadLanguage(currentLanguage);
+}
+
+// Load language file
+function loadLanguage(lang) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = `/languages/${lang}.js`;
+        script.onload = function() {
+            translations = window[lang] || {};
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            updatePageTexts();
+            resolve();
+        };
+        script.onerror = function() {
+            console.error(`Failed to load language file: ${lang}.js`);
+            reject(new Error(`Language file not found: ${lang}`));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// Get translated text
+function getText(key, defaultText = '') {
+    return translations[key] || defaultText || key;
+}
+
+// Update all page texts
+function updatePageTexts() {
+    // Update elements with data-text attribute
+    document.querySelectorAll('[data-text]').forEach(element => {
+        const key = element.getAttribute('data-text');
+        element.textContent = getText(key);
+    });
+    
+    // Update placeholders
+    document.querySelectorAll('[data-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-placeholder');
+        element.placeholder = getText(key);
+    });
+    
+    // Update titles
+    document.querySelectorAll('[data-title]').forEach(element => {
+        const key = element.getAttribute('data-title');
+        element.title = getText(key);
+    });
+    
+    // Update language selector
+    updateLanguageSelector();
+}
+
+// Update language selector
+function updateLanguageSelector() {
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.value = currentLanguage;
+    }
+}
+
+// Change language
+function changeLanguage(lang) {
+    if (availableLanguages[lang]) {
+        loadLanguage(lang).then(() => {
+            console.log(`Language changed to: ${lang}`);
+        }).catch(error => {
+            console.error('Failed to change language:', error);
+        });
+    }
+}
+
+// Create language selector
+function createLanguageSelector() {
+    const selector = document.createElement('select');
+    selector.id = 'languageSelect';
+    selector.className = 'language-selector';
+    
+    Object.entries(availableLanguages).forEach(([code, name]) => {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = name;
+        selector.appendChild(option);
+    });
+    
+    selector.addEventListener('change', function() {
+        changeLanguage(this.value);
+    });
+    
+    return selector;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeLanguage();
+    
+    // Add language selector event listener
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', function() {
+            changeLanguage(this.value);
+        });
+    }
+});
+
 // Export functions for use in other files
 window.RetroToolCommon = {
     showError,
@@ -289,5 +419,14 @@ window.RetroToolCommon = {
     setRoomCreator,
     getStoredUsername,
     storeUsername,
-    clearStoredData
+    clearStoredData,
+    // Language functions
+    initializeLanguage,
+    loadLanguage,
+    getText,
+    updatePageTexts,
+    changeLanguage,
+    createLanguageSelector,
+    availableLanguages,
+    currentLanguage: () => currentLanguage
 }; 

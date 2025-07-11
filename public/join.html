@@ -9,19 +9,29 @@
 <body>
     <div class="container">
         <header>
-            <h1>🚪 Odaya Katıl</h1>
-            <a href="/" class="back-link">← Ana Sayfaya Dön</a>
+            <div class="header-content">
+                <h1>🚪 <span data-text="join_room_title">Odaya Katıl</span></h1>
+                <div class="language-selector-container">
+                    <select id="languageSelect" class="language-selector">
+                        <option value="tr">Türkçe</option>
+                        <option value="en">English</option>
+                        <option value="de">Deutsch</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+            </div>
+            <a href="/" class="back-link" data-text="back_to_home">← Ana Sayfaya Dön</a>
         </header>
 
         <main>
             <div class="form-container">
                 <form id="joinRoomForm">
                     <div class="form-group">
-                        <label for="username">Kullanıcı Adınız *</label>
-                        <input type="text" id="username" placeholder="Adınızı girin" required>
+                        <label for="username" data-text="username">Kullanıcı Adınız *</label>
+                        <input type="text" id="username" data-placeholder="username_placeholder" placeholder="Adınızı girin" required>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Odaya Katıl</button>
+                    <button type="submit" class="btn btn-primary" data-text="join_room_button">Odaya Katıl</button>
                 </form>
             </div>
         </main>
@@ -30,7 +40,7 @@
     <div id="errorModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3>Hata</h3>
+            <h3 data-text="error">Hata</h3>
             <p id="errorMessage"></p>
         </div>
     </div>

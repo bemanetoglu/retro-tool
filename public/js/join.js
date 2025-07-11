@@ -7,18 +7,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const roomCode = RetroToolCommon.getCurrentRoomCode();
     
     if (!roomCode) {
-        RetroToolCommon.showError('Geçersiz oda linki.');
+        RetroToolCommon.showError(RetroToolCommon.getText('invalid_room_link', 'Geçersiz oda linki.'));
         setTimeout(() => {
             RetroToolCommon.goHome();
         }, 2000);
         return;
     }
     
-    // Auto-fill stored username
-    const storedUsername = RetroToolCommon.getStoredUsername();
-    if (storedUsername) {
-        usernameInput.value = storedUsername;
-    }
+    // Don't auto-fill stored username for join page
+    // Leave username input empty for better UX
     
     // Handle form submission
     joinRoomForm.addEventListener('submit', async function(e) {
@@ -28,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate username
         if (!RetroToolCommon.validateUsername(username)) {
-            RetroToolCommon.showError('Kullanıcı adı 2-20 karakter arasında olmalı ve sadece harf, rakam ve boşluk içermelidir');
+            RetroToolCommon.showError(RetroToolCommon.getText('username_validation_error', 'Kullanıcı adı 2-20 karakter arasında olmalı ve sadece harf, rakam ve boşluk içermelidir'));
             usernameInput.focus();
             return;
         }
@@ -104,12 +101,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const counter = document.createElement('small');
     counter.style.color = '#718096';
     counter.style.fontSize = '0.8rem';
-    counter.textContent = '0/20 karakter';
+    counter.textContent = '0/20 ' + RetroToolCommon.getText('characters', 'karakter');
     usernameGroup.appendChild(counter);
     
     usernameInput.addEventListener('input', function() {
         const length = this.value.length;
-        counter.textContent = `${length}/20 karakter`;
+        counter.textContent = `${length}/20 ${RetroToolCommon.getText('characters', 'karakter')}`;
         
         if (length > 20) {
             counter.style.color = '#f56565';
@@ -121,34 +118,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Add username suggestions
-document.addEventListener('DOMContentLoaded', function() {
-    const usernameInput = document.getElementById('username');
-    
-    const suggestions = [
-        'Ahmet',
-        'Ayşe',
-        'Mehmet',
-        'Fatma',
-        'Developer',
-        'Scrum Master',
-        'Product Owner',
-        'Tester'
-    ];
-    
-    // Add datalist for suggestions
-    const datalist = document.createElement('datalist');
-    datalist.id = 'usernameSuggestions';
-    
-    suggestions.forEach(suggestion => {
-        const option = document.createElement('option');
-        option.value = suggestion;
-        datalist.appendChild(option);
-    });
-    
-    document.body.appendChild(datalist);
-    usernameInput.setAttribute('list', 'usernameSuggestions');
-});
+// Username suggestions removed for cleaner UX
+// Users will type their own names
 
 // Handle placeholder animation
 document.addEventListener('DOMContentLoaded', function() {

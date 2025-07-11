@@ -16,17 +16,25 @@
                     <span id="timeRemaining"></span>
                 </div>
             </div>
+            <div class="language-selector-container">
+                <select id="languageSelect" class="language-selector">
+                    <option value="tr">Türkçe</option>
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                    <option value="es">Español</option>
+                </select>
+            </div>
             <div class="room-actions" id="creatorActions" style="display: none;">
-                <button class="btn btn-small" onclick="extendTime()">Zaman Uzat</button>
-                <button class="btn btn-small" onclick="reopenRoom()">Odayı Yeniden Aç</button>
-                <button class="btn btn-small" onclick="terminateRoom()" style="background: #f56565;">Retrospektifi Bitir</button>
-                <button class="btn btn-small" onclick="exportSelected()">Excel İndir</button>
+                <button class="btn btn-small" onclick="extendTime()" data-text="extend_time">Zaman Uzat</button>
+                <button class="btn btn-small" onclick="reopenRoom()" data-text="reopen_room">Odayı Yeniden Aç</button>
+                <button class="btn btn-small" onclick="terminateRoom()" style="background: #f56565;" data-text="terminate_retro">Retrospektifi Bitir</button>
+                <button class="btn btn-small" onclick="exportSelected()" data-text="export_excel">Excel İndir</button>
             </div>
         </header>
 
         <div class="room-layout">
             <aside class="participants-sidebar">
-                <h3>Katılımcılar</h3>
+                <h3 data-text="participants">Katılımcılar</h3>
                 <div id="participantsList" class="participants-list">
                     <!-- Participants will be loaded here -->
                 </div>
@@ -34,28 +42,28 @@
             
             <main class="retro-board">
                 <div class="retro-column mad">
-                <h2>😡 Mad</h2>
+                <h2>😡 <span data-text="mad">Mad</span></h2>
                 <div class="add-entry">
-                    <textarea id="madInput" placeholder="Neyi kötü buldunuz?"></textarea>
-                    <button onclick="addEntry('mad')">Ekle</button>
+                    <textarea id="madInput" data-placeholder="mad_placeholder" placeholder="Neyi kötü buldunuz?"></textarea>
+                    <button onclick="addEntry('mad')" data-text="add_button">Ekle</button>
                 </div>
                 <div class="entries" id="madEntries"></div>
             </div>
 
             <div class="retro-column sad">
-                <h2>😔 Sad</h2>
+                <h2>😔 <span data-text="sad">Sad</span></h2>
                 <div class="add-entry">
-                    <textarea id="sadInput" placeholder="Neyi üzücü buldunuz?"></textarea>
-                    <button onclick="addEntry('sad')">Ekle</button>
+                    <textarea id="sadInput" data-placeholder="sad_placeholder" placeholder="Neyi üzücü buldunuz?"></textarea>
+                    <button onclick="addEntry('sad')" data-text="add_button">Ekle</button>
                 </div>
                 <div class="entries" id="sadEntries"></div>
             </div>
 
             <div class="retro-column glad">
-                <h2>😊 Glad</h2>
+                <h2>😊 <span data-text="glad">Glad</span></h2>
                 <div class="add-entry">
-                    <textarea id="gladInput" placeholder="Neyi iyi buldunuz?"></textarea>
-                    <button onclick="addEntry('glad')">Ekle</button>
+                    <textarea id="gladInput" data-placeholder="glad_placeholder" placeholder="Neyi iyi buldunuz?"></textarea>
+                    <button onclick="addEntry('glad')" data-text="add_button">Ekle</button>
                 </div>
                 <div class="entries" id="gladEntries"></div>
             </div>
@@ -64,17 +72,51 @@
 
         <div id="timeExpiredModal" class="modal">
             <div class="modal-content">
-                <h3>⏰ Zaman Doldu!</h3>
-                <p>Retrospektif için belirlenen zaman sona erdi. Yeni giriş yapılamaz.</p>
-                <button class="btn btn-primary" onclick="closeModal('timeExpiredModal')">Tamam</button>
+                <h3>⏰ <span data-text="time_expired">Zaman Doldu!</span></h3>
+                <p data-text="time_expired_message">Retrospektif için belirlenen zaman sona erdi. Yeni giriş yapılamaz.</p>
+                <button class="btn btn-primary" onclick="closeModal('timeExpiredModal')" data-text="ok">Tamam</button>
             </div>
         </div>
 
         <div id="terminatedModal" class="modal">
             <div class="modal-content">
-                <h3>🛑 Retrospektif Sonlandırıldı</h3>
-                <p>Oda sahibi retrospektifi sonlandırdı. Artık yeni giriş yapılamaz.</p>
-                <button class="btn btn-primary" onclick="closeModal('terminatedModal')">Tamam</button>
+                <h3>🛑 <span data-text="retro_terminated">Retrospektif Sonlandırıldı</span></h3>
+                <p data-text="retro_terminated_message">Oda sahibi retrospektifi sonlandırdı. Artık yeni giriş yapılamaz.</p>
+                <button class="btn btn-primary" onclick="closeModal('terminatedModal')" data-text="ok">Tamam</button>
+            </div>
+        </div>
+
+        <div id="extendTimeModal" class="modal">
+            <div class="modal-content">
+                <h3>⏰ <span data-text="extend_time">Zaman Uzat</span></h3>
+                <p data-text="extend_time_prompt">Kaç dakika eklemek istiyorsunuz?</p>
+                <input type="number" id="extendTimeInput" min="1" max="60" value="15">
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="confirmExtendTime()" data-text="ok">Tamam</button>
+                    <button class="btn btn-secondary" onclick="closeModal('extendTimeModal')" data-text="cancel">İptal</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="reopenRoomModal" class="modal">
+            <div class="modal-content">
+                <h3>🔄 <span data-text="reopen_room">Odayı Yeniden Aç</span></h3>
+                <p data-text="reopen_room_confirm">Odayı yeniden açmak istediğinizden emin misiniz? Bu durumda zaman sınırı kaldırılacaktır.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="confirmReopenRoom()" data-text="yes">Evet</button>
+                    <button class="btn btn-secondary" onclick="closeModal('reopenRoomModal')" data-text="no">Hayır</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="terminateRoomModal" class="modal">
+            <div class="modal-content">
+                <h3>🛑 <span data-text="terminate_retro">Retrospektifi Bitir</span></h3>
+                <p data-text="terminate_room_confirm">Retrospektifi sonlandırmak istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm katılımcılar için giriş engellenecektir.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="confirmTerminateRoom()" data-text="yes">Evet</button>
+                    <button class="btn btn-secondary" onclick="closeModal('terminateRoomModal')" data-text="no">Hayır</button>
+                </div>
             </div>
         </div>
     </div>
@@ -82,7 +124,7 @@
     <div id="errorModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3>Hata</h3>
+            <h3 data-text="error">Hata</h3>
             <p id="errorMessage"></p>
         </div>
     </div>

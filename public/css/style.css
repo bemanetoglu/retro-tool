@@ -27,6 +27,56 @@ header {
     color: white;
 }
 
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.header-content h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.language-selector-container {
+    display: flex;
+    align-items: center;
+}
+
+.language-selector {
+    padding: 8px 12px;
+    border: 2px solid rgba(255,255,255,0.6);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.9);
+    color: #4a5568;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.language-selector option {
+    background: white;
+    color: #4a5568;
+}
+
+.language-selector:hover {
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(255,255,255,0.8);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.language-selector:focus {
+    outline: none;
+    background: rgba(255,255,255,0.95);
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
 header h1 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
@@ -174,12 +224,27 @@ input:focus, textarea:focus {
 .room-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     background: rgba(255, 255, 255, 0.95);
     padding: 1.5rem;
     border-radius: 15px;
     margin-bottom: 2rem;
     box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.room-header .language-selector {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid #e2e8f0;
+    color: #4a5568;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.room-header .language-selector:hover {
+    background: white;
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .room-info h1 {
@@ -548,6 +613,16 @@ input:focus, textarea:focus {
     margin-top: 1.5rem;
 }
 
+.modal input[type="number"] {
+    width: 100%;
+    margin: 1rem 0;
+    padding: 0.8rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    text-align: center;
+}
+
 /* Footer */
 footer {
     text-align: center;
@@ -560,6 +635,16 @@ footer {
 @media (max-width: 768px) {
     .container {
         padding: 1rem;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .header-content h1 {
+        font-size: 2rem;
     }
     
     header h1 {
