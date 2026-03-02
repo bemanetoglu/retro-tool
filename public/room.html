@@ -25,6 +25,7 @@
                 </select>
             </div>
             <div class="room-actions" id="creatorActions" style="display: none;">
+                <button class="btn btn-small" id="startTimerBtn" onclick="startTimer()" style="background: #48bb78; display: none;" data-text="start_timer">Süreyi Başlat</button>
                 <button class="btn btn-small" onclick="extendTime()" data-text="extend_time">Zaman Uzat</button>
                 <button class="btn btn-small" onclick="reopenRoom()" data-text="reopen_room">Odayı Yeniden Aç</button>
                 <button class="btn btn-small" onclick="terminateRoom()" style="background: #f56565;" data-text="terminate_retro">Retrospektifi Bitir</button>
@@ -74,7 +75,7 @@
             <div class="modal-content">
                 <h3>⏰ <span data-text="time_expired">Zaman Doldu!</span></h3>
                 <p data-text="time_expired_message">Retrospektif için belirlenen zaman sona erdi. Yeni giriş yapılamaz.</p>
-                <button class="btn btn-primary" onclick="closeModal('timeExpiredModal')" data-text="ok">Tamam</button>
+                <button class="btn btn-primary" onclick="closeTimeExpiredModal()" data-text="ok">Tamam</button>
             </div>
         </div>
 
@@ -116,6 +117,19 @@
                 <div class="modal-actions">
                     <button class="btn btn-primary" onclick="confirmTerminateRoom()" data-text="yes">Evet</button>
                     <button class="btn btn-secondary" onclick="closeModal('terminateRoomModal')" data-text="no">Hayır</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="editEntryModal" class="modal">
+            <div class="modal-content">
+                <h3>✏️ <span data-text="edit_entry">Girişi Düzenle</span></h3>
+                <textarea id="editEntryInput" rows="4" data-placeholder="edit_entry_placeholder" placeholder="Girişinizi düzenleyin..."></textarea>
+                <input type="hidden" id="editEntryId" value="">
+                <input type="hidden" id="editEntryCategory" value="">
+                <div class="modal-actions">
+                    <button class="btn btn-primary" onclick="confirmEditEntry()" data-text="save">Kaydet</button>
+                    <button class="btn btn-secondary" onclick="closeModal('editEntryModal')" data-text="cancel">İptal</button>
                 </div>
             </div>
         </div>

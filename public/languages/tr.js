@@ -71,6 +71,7 @@ const tr = {
     "participants": "Katılımcılar",
     "no_participants": "Henüz katılımcı yok",
     "room_owner": "Sahip",
+    "start_timer": "Süreyi Başlat",
     "extend_time": "Zaman Uzat",
     "reopen_room": "Odayı Yeniden Aç",
     "terminate_retro": "Retrospektifi Bitir",
@@ -147,7 +148,20 @@ const tr = {
     "participant_limit_error": "Katılımcı sınırı 1-50 arasında olmalıdır",
     "time_limit_error": "Zaman sınırı 1-300 dakika arasında olmalıdır",
     "username_validation_error": "Kullanıcı adı 2-20 karakter arasında olmalı ve sadece harf, rakam ve boşluk içermelidir",
-    "characters": "karakter"
+    "characters": "karakter",
+    "timer_started": "Süre başlatıldı!",
+    "delete_entry_confirm": "Bu girişi silmek istediğinizden emin misiniz?",
+    "edit_entry_prompt": "Girişi düzenleyin:",
+    "edit_entry": "Girişi Düzenle",
+    "edit_entry_placeholder": "Girişinizi düzenleyin...",
+    "entry_deleted": "Giriş silindi!",
+    "entry_updated": "Giriş güncellendi!",
+    "rating_added": "Puan verildi!",
+    "cannot_rate_own_entry": "Kendi girişinize puan veremezsiniz",
+    "can_only_rate_published": "Sadece yayınlanmış girişlere puan verebilirsiniz",
+    "ratings_only_after_end": "Puan verme sadece retrospektif bittikten sonra yapılabilir",
+    "stars": "yıldız",
+    "average": "Ortalama"
 };
 
 // Export for use in other files

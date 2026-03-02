@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "create_room_with_valid_and_invalid_participant_limits",
+    "description": "Test creating a room with valid participant limits (1-50) and invalid limits (e.g., 100) to verify validation and error handling."
+  },
+  {
+    "id": "TC002",
+    "title": "join_room_with_valid_and_invalid_codes",
+    "description": "Test joining a room with existing 6-digit codes and non-existent codes to verify successful join and 404 error response."
+  },
+  {
+    "id": "TC003",
+    "title": "create_edit_publish_and_delete_entries",
+    "description": "Test creating draft entries in mad/sad/glad categories, editing drafts, publishing entries, and deleting entries with ownership and content length validations."
+  },
+  {
+    "id": "TC004",
+    "title": "start_extend_reopen_and_terminate_timer_as_creator_and_non_creator",
+    "description": "Test timer lifecycle endpoints for starting, extending, reopening, and terminating the retro by creator and non-creator roles, including validation of time extension limits."
+  },
+  {
+    "id": "TC005",
+    "title": "rate_published_entries_after_retro_end_with_validations",
+    "description": "Test rating published entries after retro ends with valid ratings (1-5), invalid ratings, self-rating prevention, and rating disallowed before retro ends."
+  },
+  {
+    "id": "TC006",
+    "title": "export_selected_published_entries_to_excel_as_creator_and_non_creator",
+    "description": "Test exporting selected and published entries to Excel by creator and non-creator roles, including handling of no entries to export."
+  },
+  {
+    "id": "TC007",
+    "title": "socket_io_join_room_and_receive_real_time_updates",
+    "description": "Test Socket.IO connection with joinRoom event for valid and invalid room codes, receiving roomState, newEntry, participantUpdate, and entryToggled events."
+  },
+  {
+    "id": "TC008",
+    "title": "toggle_entry_selection_by_creator_and_non_creator",
+    "description": "Test toggling entry selection by creator and non-creator roles, verifying permission enforcement and broadcast of entryToggled event."
+  },
+  {
+    "id": "TC009",
+    "title": "get_participants_list_and_room_cleanup_after_all_leave",
+    "description": "Test retrieving participants list via API and verify room auto-deletion after all participants leave, ensuring subsequent room access returns 404."
+  },
+  {
+    "id": "TC010",
+    "title": "client_language_detection_and_persistence",
+    "description": "Test client-side language detection from browser, loading supported language packs, and persistence of language choice in localStorage across sessions."
+  }
+]

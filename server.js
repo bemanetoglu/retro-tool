@@ -45,16 +45,19 @@ function generateRoomCode() {
 function cleanupExpiredRooms() {
   const now = Date.now();
   for (const [code, room] of rooms.entries()) {
-    if (room.timeLimit && now > room.createdAt + room.timeLimit * 60 * 1000) {
-      if (room.participants.size === 0) {
-        rooms.delete(code);
+    if (room.timeLimit) {
+      const startTime = room.started && room.startedAt ? room.startedAt : room.createdAt;
+      if (now > startTime + room.timeLimit * 60 * 1000) {
+        if (room.participants.size === 0) {
+          rooms.delete(code);
+        }
       }
     }
   }
 }
 
 // Run cleanup every 5 minutes
-setInterval(cleanupExpiredRooms, 5 * 60 * 1000);
+const cleanupInterval = setInterval(cleanupExpiredRooms, 5 * 60 * 1000);
 
 // Routes
 app.get('/', (req, res) => {
@@ -107,6 +110,8 @@ app.post('/api/create-room', (req, res) => {
     participantLimit: participantLimit || null,
     timeLimit: timeLimit || null,
     createdAt: Date.now(),
+    started: false,
+    startedAt: null,
     participants: new Map(), // sessionId -> { username, socketId }
     entries: {
       mad: [],
@@ -146,6 +151,12 @@ app.post('/api/join-room', (req, res) => {
     return res.status(404).json({ error: 'Room not found' });
   }
 
+  // Check if user is already in the room (rejoin from different tab)
+  const existingSession = userSessions.get(req.session.id);
+  if (existingSession && existingSession.roomCode === roomCode) {
+    return res.json({ success: true, rejoined: true });
+  }
+
   // Check if username is already taken
   for (const participant of room.participants.values()) {
     if (participant.username.toLowerCase() === username.trim().toLowerCase()) {
@@ -163,12 +174,6 @@ app.post('/api/join-room', (req, res) => {
   // Check participant limit
   if (room.participantLimit && room.participants.size >= room.participantLimit) {
     return res.status(400).json({ error: 'Room is full, cannot join' });
-  }
-
-  // Check if user is already in the room (from different tab)
-  const existingSession = userSessions.get(req.session.id);
-  if (existingSession && existingSession.roomCode === roomCode) {
-    return res.json({ success: true, rejoined: true });
   }
 
   // Store session info
@@ -191,8 +196,17 @@ app.get('/api/room/:code', (req, res) => {
   }
 
   const now = Date.now();
-  let timeRemaining = room.timeLimit ? 
-    Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt)) : null;
+  let timeRemaining = null;
+  
+  if (room.timeLimit) {
+    if (room.started && room.startedAt) {
+      // Timer has been started, calculate from startedAt
+      timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - room.startedAt));
+    } else {
+      // Timer not started yet
+      timeRemaining = room.timeLimit * 60 * 1000;
+    }
+  }
   
   // If room is terminated, time remaining should be 0
   if (room.terminated) {
@@ -279,8 +293,11 @@ app.post('/api/room/:code/entry', (req, res) => {
   
   // Check if time limit has expired and room is not reopened
   const now = Date.now();
-  if (room.timeLimit && !room.reopened && now > room.createdAt + room.timeLimit * 60 * 1000) {
-    return res.status(400).json({ error: 'Zaman sınırı doldu' });
+  if (room.timeLimit && !room.reopened) {
+    const startTime = room.started && room.startedAt ? room.startedAt : room.createdAt;
+    if (now > startTime + room.timeLimit * 60 * 1000) {
+      return res.status(400).json({ error: 'Zaman sınırı doldu' });
+    }
   }
 
   const entry = {
@@ -290,7 +307,8 @@ app.post('/api/room/:code/entry', (req, res) => {
     timestamp: now,
     selected: false,
     draft: true, // Başlangıçta taslak olarak oluştur
-    published: false
+    published: false,
+    ratings: {} // username -> rating (1-5)
   };
 
   room.entries[category].push(entry);
@@ -299,6 +317,38 @@ app.post('/api/room/:code/entry', (req, res) => {
   io.to(code).emit('newEntry', { category, entry });
   
   res.json({ success: true });
+});
+
+app.post('/api/room/:code/start', (req, res) => {
+  const code = req.params.code;
+  
+  const room = rooms.get(code);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  if (room.creator !== req.session.id) {
+    return res.status(403).json({ error: 'Only room creator can start the timer' });
+  }
+
+  if (room.started) {
+    return res.status(400).json({ error: 'Timer already started' });
+  }
+
+  if (!room.timeLimit) {
+    return res.status(400).json({ error: 'Room has no time limit' });
+  }
+
+  room.started = true;
+  room.startedAt = Date.now();
+  
+  // Broadcast to all participants
+  io.to(code).emit('timerStarted', { 
+    startedAt: room.startedAt,
+    timeLimit: room.timeLimit
+  });
+  
+  res.json({ success: true, startedAt: room.startedAt });
 });
 
 app.post('/api/room/:code/extend-time', (req, res) => {
@@ -320,9 +370,10 @@ app.post('/api/room/:code/extend-time', (req, res) => {
 
   room.timeLimit += additionalMinutes || 15;
   
-  // Calculate new time remaining
+  // Calculate new time remaining - use startedAt if started, otherwise createdAt
   const now = Date.now();
-  const timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt));
+  const startTime = room.started && room.startedAt ? room.startedAt : room.createdAt;
+  const timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - startTime));
   
   // Broadcast to all participants
   io.to(code).emit('timeExtended', { 
@@ -346,6 +397,7 @@ app.post('/api/room/:code/reopen', (req, res) => {
   }
 
   room.reopened = true;
+  room.terminated = false; // Reset terminated status so users can publish drafts again
   
   // Broadcast to all participants
   io.to(code).emit('roomReopened');
@@ -412,8 +464,17 @@ app.get('/api/room/:code/timer', (req, res) => {
   }
 
   const now = Date.now();
-  let timeRemaining = room.timeLimit ? 
-    Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt)) : null;
+  let timeRemaining = null;
+  
+  if (room.timeLimit) {
+    if (room.started && room.startedAt) {
+      // Timer has been started, calculate from startedAt
+      timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - room.startedAt));
+    } else {
+      // Timer not started yet
+      timeRemaining = room.timeLimit * 60 * 1000;
+    }
+  }
   
   // If room is terminated or reopened, handle accordingly
   if (room.terminated) {
@@ -422,8 +483,18 @@ app.get('/api/room/:code/timer', (req, res) => {
     timeRemaining = null;
   }
 
+  // Check if time has expired and broadcast to all participants (only once)
+  if (room.timeLimit && room.started && room.startedAt && !room.reopened && !room.terminated && timeRemaining === 0) {
+    // Check if we haven't already sent timeExpired event
+    if (!room.timeExpiredSent) {
+      room.timeExpiredSent = true;
+      io.to(code).emit('timeExpired');
+    }
+  }
+
   res.json({ 
     timeRemaining: timeRemaining,
+    started: room.started || false,
     terminated: room.terminated || false,
     reopened: room.reopened || false
   });
@@ -574,8 +645,11 @@ app.post('/api/room/:code/entry/:id/publish', (req, res) => {
   
   // Check if time limit has expired and room is not reopened
   const now = Date.now();
-  if (room.timeLimit && !room.reopened && now > room.createdAt + room.timeLimit * 60 * 1000) {
-    return res.status(400).json({ error: 'Zaman sınırı doldu' });
+  if (room.timeLimit && !room.reopened) {
+    const startTime = room.started && room.startedAt ? room.startedAt : room.createdAt;
+    if (now > startTime + room.timeLimit * 60 * 1000) {
+      return res.status(400).json({ error: 'Zaman sınırı doldu' });
+    }
   }
 
   // Toggle publish state
@@ -587,6 +661,221 @@ app.post('/api/room/:code/entry/:id/publish', (req, res) => {
   io.to(code).emit('newEntry', { category: entryCategory, entry: foundEntry });
   
   res.json({ success: true, published: foundEntry.published });
+});
+
+app.delete('/api/room/:code/entry/:id', (req, res) => {
+  const code = req.params.code;
+  const entryId = req.params.id;
+  
+  const room = rooms.get(code);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  const userSession = userSessions.get(req.session.id);
+  if (!userSession || userSession.roomCode !== code) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Find the entry across all categories
+  let foundEntry = null;
+  let entryCategory = null;
+  
+  for (const category of ['mad', 'sad', 'glad']) {
+    const entryIndex = room.entries[category].findIndex(e => e.id === entryId);
+    if (entryIndex !== -1) {
+      foundEntry = room.entries[category][entryIndex];
+      entryCategory = category;
+      break;
+    }
+  }
+
+  if (!foundEntry) {
+    return res.status(404).json({ error: 'Entry not found' });
+  }
+
+  // Check if user owns this entry
+  if (foundEntry.username !== userSession.username) {
+    return res.status(403).json({ error: 'You can only delete your own entries' });
+  }
+
+  // Check if room is terminated
+  if (room.terminated) {
+    return res.status(400).json({ error: 'Retrospektif sonlandırıldı' });
+  }
+  
+  // Check if time limit has expired and room is not reopened
+  const now = Date.now();
+  if (room.timeLimit && !room.reopened && now > room.createdAt + room.timeLimit * 60 * 1000) {
+    return res.status(400).json({ error: 'Zaman sınırı doldu' });
+  }
+
+  // Remove entry from array
+  const category = entryCategory;
+  room.entries[category] = room.entries[category].filter(e => e.id !== entryId);
+  
+  // Broadcast deletion to all participants
+  io.to(code).emit('entryDeleted', { category, entryId });
+  
+  res.json({ success: true });
+});
+
+app.put('/api/room/:code/entry/:id', (req, res) => {
+  const code = req.params.code;
+  const entryId = req.params.id;
+  const { text } = req.body;
+  
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  const room = rooms.get(code);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  const userSession = userSessions.get(req.session.id);
+  if (!userSession || userSession.roomCode !== code) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Find the entry across all categories
+  let foundEntry = null;
+  let entryCategory = null;
+  
+  for (const category of ['mad', 'sad', 'glad']) {
+    const entry = room.entries[category].find(e => e.id === entryId);
+    if (entry) {
+      foundEntry = entry;
+      entryCategory = category;
+      break;
+    }
+  }
+
+  if (!foundEntry) {
+    return res.status(404).json({ error: 'Entry not found' });
+  }
+
+  // Check if user owns this entry
+  if (foundEntry.username !== userSession.username) {
+    return res.status(403).json({ error: 'You can only edit your own entries' });
+  }
+
+  // Only allow editing draft entries
+  if (foundEntry.published) {
+    return res.status(400).json({ error: 'You can only edit draft entries' });
+  }
+
+  // Check if room is terminated
+  if (room.terminated) {
+    return res.status(400).json({ error: 'Retrospektif sonlandırıldı' });
+  }
+  
+  // Check if time limit has expired and room is not reopened
+  const now = Date.now();
+  if (room.timeLimit && !room.reopened) {
+    const startTime = room.started && room.startedAt ? room.startedAt : room.createdAt;
+    if (now > startTime + room.timeLimit * 60 * 1000) {
+      return res.status(400).json({ error: 'Zaman sınırı doldu' });
+    }
+  }
+
+  // Update entry text
+  foundEntry.text = text.trim();
+  foundEntry.timestamp = now;
+  
+  // Broadcast updated entry to all participants
+  io.to(code).emit('newEntry', { category: entryCategory, entry: foundEntry });
+  
+  res.json({ success: true, entry: foundEntry });
+});
+
+app.post('/api/room/:code/entry/:id/rate', (req, res) => {
+  const code = req.params.code;
+  const entryId = req.params.id;
+  const { rating } = req.body;
+  
+  if (!rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+  }
+
+  const room = rooms.get(code);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  const userSession = userSessions.get(req.session.id);
+  if (!userSession || userSession.roomCode !== code) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Check if room is terminated or time expired
+  const now = Date.now();
+  let timeExpired = false;
+  if (room.timeLimit && room.started && room.startedAt && !room.reopened) {
+    const startTime = room.startedAt;
+    if (now > startTime + room.timeLimit * 60 * 1000) {
+      timeExpired = true;
+    }
+  }
+  
+  if (!room.terminated && !timeExpired) {
+    return res.status(400).json({ error: 'Ratings can only be given after the retrospective ends' });
+  }
+
+  // Find the entry across all categories
+  let foundEntry = null;
+  let entryCategory = null;
+  
+  for (const category of ['mad', 'sad', 'glad']) {
+    const entry = room.entries[category].find(e => e.id === entryId);
+    if (entry) {
+      foundEntry = entry;
+      entryCategory = category;
+      break;
+    }
+  }
+
+  if (!foundEntry) {
+    return res.status(404).json({ error: 'Entry not found' });
+  }
+
+  // Check if user is trying to rate their own entry
+  if (foundEntry.username === userSession.username) {
+    return res.status(400).json({ error: 'You cannot rate your own entry' });
+  }
+
+  // Check if entry is published (not draft)
+  if (!foundEntry.published) {
+    return res.status(400).json({ error: 'You can only rate published entries' });
+  }
+
+  // Initialize ratings object if it doesn't exist
+  if (!foundEntry.ratings) {
+    foundEntry.ratings = {};
+  }
+
+  // Update rating for this user
+  foundEntry.ratings[userSession.username] = rating;
+  
+  // Calculate average rating excluding the entry owner's rating (if any)
+  const ratingsArray = Object.entries(foundEntry.ratings)
+    .filter(([username]) => username !== foundEntry.username)
+    .map(([, rating]) => rating);
+  
+  const averageRating = ratingsArray.length > 0 
+    ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length 
+    : 0;
+  
+  // Broadcast updated entry to all participants
+  io.to(code).emit('newEntry', { category: entryCategory, entry: foundEntry });
+  
+  res.json({ 
+    success: true, 
+    rating: rating,
+    averageRating: averageRating,
+    totalRatings: ratingsArray.length
+  });
 });
 
 // Socket.io connection handling
@@ -634,8 +923,20 @@ io.on('connection', (socket) => {
     // Send current room state to the joining user
     // Filter entries based on user and room state
     const now = Date.now();
-    const timeRemaining = room.timeLimit ? 
-      Math.max(0, room.timeLimit * 60 * 1000 - (now - room.createdAt)) : null;
+    let timeRemaining = null;
+    if (room.timeLimit) {
+      if (room.started && room.startedAt) {
+        // Timer has been started, calculate from startedAt
+        timeRemaining = Math.max(0, room.timeLimit * 60 * 1000 - (now - room.startedAt));
+      } else {
+        // Timer not started yet
+        timeRemaining = room.timeLimit * 60 * 1000;
+      }
+    }
+    // If room is terminated, time remaining should be 0
+    if (room.terminated) {
+      timeRemaining = 0;
+    }
     const isTimeUp = room.timeLimit && timeRemaining === 0;
     const isTerminated = room.terminated;
     const shouldShowAllEntries = isTimeUp || isTerminated;
@@ -666,7 +967,9 @@ io.on('connection', (socket) => {
       entries: filteredEntries,
       participantCount: room.participants.size,
       isCreator: room.creator === sessionId,
-      shouldShowAllEntries: shouldShowAllEntries
+      shouldShowAllEntries: shouldShowAllEntries,
+      started: room.started || false,
+      startedAt: room.startedAt
     });
   });
 
@@ -708,6 +1011,11 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Retro Tool server running on port ${PORT}`);
-}); 
+
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Retro Tool server running on port ${PORT}`);
+  });
+}
+
+module.exports = { app, server, io, rooms, userSessions, generateRoomCode, cleanupInterval };

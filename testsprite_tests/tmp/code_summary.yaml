@@ -1,0 +1,174 @@
+project:
+  name: retro-tool
+  description: "Real-time web-based retrospective tool for agile teams using Mad/Sad/Glad format with WebSocket support"
+  version: "1.0.0"
+  license: MIT
+
+tech_stack:
+  runtime: Node.js
+  language: JavaScript
+  framework: Express.js (v4.18.2)
+  real_time: Socket.IO (v4.7.2)
+  session: express-session (v1.17.3)
+  excel: ExcelJS (v4.3.0)
+  cookie: cookie-parser (v1.4.6)
+  dev_tools:
+    - nodemon (v3.0.1)
+
+architecture:
+  type: monolithic
+  pattern: MVC-like (server-rendered pages with client-side JS)
+  storage: in-memory (Map-based, no database)
+  auth: session-based (express-session)
+  real_time_protocol: WebSocket (Socket.IO)
+  port: 3000
+
+server:
+  file: server.js
+  lines: 1016
+  responsibilities:
+    - Express HTTP server setup
+    - Session middleware configuration
+    - Socket.IO integration with session sharing
+    - REST API endpoints (13 routes)
+    - WebSocket event handling (joinRoom, disconnect)
+    - In-memory room and user session management
+    - Room cleanup (every 5 minutes)
+    - Excel export generation
+
+api_endpoints:
+  pages:
+    - "GET / -> index.html"
+    - "GET /create-room -> create-room.html"
+    - "GET /join/:code -> join.html"
+    - "GET /room/:code -> room.html"
+  rest:
+    - "POST /api/create-room - Create a new room"
+    - "POST /api/join-room - Join an existing room"
+    - "GET /api/room/:code - Get room data"
+    - "POST /api/room/:code/entry - Create a new entry"
+    - "POST /api/room/:code/start - Start the timer"
+    - "POST /api/room/:code/extend-time - Extend room time"
+    - "POST /api/room/:code/reopen - Reopen room"
+    - "POST /api/room/:code/terminate - Terminate room"
+    - "GET /api/room/:code/participants - Get participants list"
+    - "GET /api/room/:code/timer - Get timer status"
+    - "POST /api/room/:code/toggle-entry - Toggle entry selection"
+    - "GET /api/room/:code/export - Export entries to Excel"
+    - "POST /api/room/:code/entry/:id/publish - Publish/unpublish entry"
+    - "DELETE /api/room/:code/entry/:id - Delete entry"
+    - "PUT /api/room/:code/entry/:id - Edit entry"
+    - "POST /api/room/:code/entry/:id/rate - Rate entry"
+
+socket_events:
+  client_to_server:
+    - joinRoom
+  server_to_client:
+    - roomState
+    - newEntry
+    - participantUpdate
+    - timerStarted
+    - timeExtended
+    - timeExpired
+    - roomReopened
+    - roomTerminated
+    - entryToggled
+    - entryDeleted
+    - error
+
+frontend:
+  pages:
+    - file: public/index.html
+      description: "Home page with join form"
+      js: public/js/index.js
+    - file: public/create-room.html
+      description: "Create room page"
+      js: public/js/create-room.js
+    - file: public/join.html
+      description: "Join room page"
+      js: public/js/join.js
+    - file: public/room.html
+      description: "Main retrospective room page"
+      js: public/js/room.js
+  shared:
+    - file: public/js/common.js
+      description: "Shared utilities, validation, i18n, API helpers"
+      exports: "window.RetroToolCommon"
+  styles:
+    - file: public/css/style.css
+  languages:
+    - public/languages/tr.js (Turkish - default)
+    - public/languages/en.js (English)
+    - public/languages/de.js (German)
+    - public/languages/es.js (Spanish)
+
+features:
+  room_management:
+    - 6-digit room code generation
+    - Invite link generation
+    - Optional participant limit (1-50)
+    - Optional time limit (1-300 minutes)
+    - Creator auto-join
+    - Room cleanup for empty rooms
+  entry_management:
+    - Three categories: Mad, Sad, Glad
+    - Draft/publish workflow
+    - Edit (draft only) and delete operations
+    - Entry selection by creator
+    - Max 500 characters per entry
+  timer:
+    - Manual start by creator
+    - Server-side timer calculation
+    - Time extension (1-60 minutes)
+    - Room reopen (removes time limit)
+    - Room termination
+  rating:
+    - 1-5 star rating system
+    - Only after retro ends (time expired or terminated)
+    - Cannot rate own entries
+    - Average rating calculation
+  export:
+    - Excel (.xlsx) export
+    - Only selected AND published entries
+    - Creator only
+  i18n:
+    - 4 languages: Turkish, English, German, Spanish
+    - Browser language auto-detection
+    - LocalStorage persistence
+  real_time:
+    - Live entry updates via Socket.IO
+    - Participant count updates
+    - Timer synchronization
+    - Entry selection broadcast
+
+data_models:
+  room:
+    fields:
+      - "code: string (6-digit)"
+      - "name: string"
+      - "creator: string (session ID)"
+      - "participantLimit: number|null"
+      - "timeLimit: number|null (minutes)"
+      - "createdAt: number (timestamp)"
+      - "started: boolean"
+      - "startedAt: number|null (timestamp)"
+      - "participants: Map<sessionId, {username, socketId}>"
+      - "entries: {mad: Entry[], sad: Entry[], glad: Entry[]}"
+      - "timeExtended: boolean"
+      - "reopened: boolean"
+      - "terminated: boolean"
+  entry:
+    fields:
+      - "id: string (UUID)"
+      - "text: string"
+      - "username: string"
+      - "timestamp: number"
+      - "selected: boolean"
+      - "draft: boolean"
+      - "published: boolean"
+      - "ratings: {username: number}"
+
+tests:
+  existing: none
+  test_framework: none configured
+  coverage: 0%

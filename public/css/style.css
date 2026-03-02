@@ -522,6 +522,71 @@ input:focus, textarea:focus {
     background: #38a169;
 }
 
+/* Entry Actions (Edit/Delete) */
+.entry-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.edit-btn,
+.delete-btn {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.edit-btn:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.delete-btn:hover {
+    background: #fed7d7;
+    border-color: #fc8181;
+    color: #c53030;
+}
+
+/* Entry Rating Styles */
+.entry-rating {
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 0.2rem;
+    cursor: pointer;
+}
+
+.rating-stars .star {
+    font-size: 1.2rem;
+    color: #e2e8f0;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.rating-stars .star:hover {
+    transform: scale(1.2);
+    color: #fbb344;
+}
+
+.rating-stars .star.filled {
+    color: #fbb344;
+}
+
+.rating-average {
+    font-size: 0.85rem;
+    color: #718096;
+    font-weight: 500;
+}
+
 /* Modal Styles */
 .modal {
     display: none;
@@ -621,6 +686,26 @@ input:focus, textarea:focus {
     border-radius: 10px;
     font-size: 1rem;
     text-align: center;
+}
+
+/* Edit Entry Modal */
+#editEntryModal textarea {
+    width: 100%;
+    min-height: 120px;
+    margin: 1rem 0;
+    padding: 0.8rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+#editEntryModal textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Footer */

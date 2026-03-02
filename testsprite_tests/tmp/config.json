@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "retro-tool",
+    "projectPath": "d:\\projects\\retro-tool",
+    "testIds": [],
+    "additionalInstruction": "",
+    "serverMode": "production",
+    "envs": {
+      "API_KEY": "sk-user-wwT1EFT25I4FTivpSEXzvp_yzAdeWQECF_3vrotvGNvQWIo7YOkJenGnuIAyrBwF-adXq4-859O2xZb_tb0Fq8dmEazHE7Jzm8s0XEy2qfPWq5bN5mjVmrQ71cjBvpUuiLI"
+    }
+  },
+  "serverPort": 58857
+}

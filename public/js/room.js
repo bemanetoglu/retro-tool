@@ -4,6 +4,9 @@ let roomCode;
 let isCreator = false;
 let timeRemaining = null;
 let timeInterval = null;
+let timerStarted = false;
+let timeExpiredModalShown = false;
+let terminatedModalShown = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     roomCode = RetroToolCommon.getCurrentRoomCode();
@@ -69,7 +72,29 @@ function initializeSocket() {
         
         if (isCreator) {
             document.getElementById('creatorActions').style.display = 'block';
+            // Show/hide start button based on timer status
+            const startBtn = document.getElementById('startTimerBtn');
+            if (startBtn) {
+                if (data.started) {
+                    startBtn.style.display = 'none';
+                    timerStarted = true;
+                } else if (data.timeLimit) {
+                    startBtn.style.display = 'inline-block';
+                    timerStarted = false;
+                }
+            }
         }
+    });
+    
+    socket.on('timerStarted', function(data) {
+        timerStarted = true;
+        const startBtn = document.getElementById('startTimerBtn');
+        if (startBtn) {
+            startBtn.style.display = 'none';
+        }
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('timer_started', 'Süre başlatıldı!'));
+        // Update timer immediately
+        loadRoomData();
     });
     
     socket.on('newEntry', function(data) {
@@ -78,7 +103,7 @@ function initializeSocket() {
         if (!existingEntry) {
             addEntryToDOM(data.category, data.entry);
         } else {
-            // Update existing entry if it exists
+            // Update existing entry if it exists - this handles rating updates
             updateEntryInDOM(data.category, data.entry);
         }
     });
@@ -103,15 +128,34 @@ function initializeSocket() {
         RetroToolCommon.showSuccess(RetroToolCommon.getText('room_reopened', 'Oda yeniden açıldı!'));
         // Room reopen removes time limit
         timeRemaining = null;
+        timeExpiredModalShown = false; // Reset flag
         const timeElement = document.getElementById('timeRemaining');
         timeElement.textContent = '';
+        RetroToolCommon.closeModal('timeExpiredModal');
+    });
+    
+    socket.on('timeExpired', function() {
+        // Show time expired modal for all participants
+        if (!timeExpiredModalShown) {
+            timeExpiredModalShown = true;
+            RetroToolCommon.showModal('timeExpiredModal');
+        }
     });
     
     socket.on('entryToggled', function(data) {
         updateEntrySelection(data.category, data.entryId, data.selected);
     });
     
+    socket.on('entryDeleted', function(data) {
+        removeEntryFromDOM(data.category, data.entryId);
+    });
+    
     socket.on('roomTerminated', function() {
+        // Store terminated status globally
+        window.roomTerminated = true;
+        terminatedModalShown = true;
+        
+        // Show terminated modal and disable inputs
         RetroToolCommon.showModal('terminatedModal');
         // Stop the timer
         if (timeInterval) {
@@ -119,12 +163,21 @@ function initializeSocket() {
             timeInterval = null;
         }
         timeRemaining = 0;
+        timerStarted = false;
         updateTimer();
         
-        // Disable all input fields
+        // Reload entries to show ratings
+        loadRoomData();
+        
+        // Disable all input fields (except modal buttons and export button)
         document.querySelectorAll('textarea, button').forEach(el => {
-            if (!el.classList.contains('modal') && !el.closest('.modal')) {
+            // Check if button has onclick="exportSelected()" or data attribute
+            const isExportButton = el.getAttribute('onclick') && el.getAttribute('onclick').includes('exportSelected');
+            if (!el.classList.contains('modal') && !el.closest('.modal') && el.id !== 'startTimerBtn' && !isExportButton) {
                 el.disabled = true;
+            } else if (isExportButton) {
+                // Make sure export button stays enabled
+                el.disabled = false;
             }
         });
     });
@@ -140,10 +193,17 @@ async function loadRoomData() {
         document.getElementById('roomName').textContent = room.name;
         isCreator = room.isCreator;
         
-        // Only update timeRemaining if it's not already set or if it's significantly different
-        // This prevents server refreshes from disrupting the local timer
-        if (timeRemaining === null || (room.timeRemaining && Math.abs(timeRemaining - room.timeRemaining) > 10000)) {
-            timeRemaining = room.timeRemaining;
+        // Update timer started status
+        timerStarted = room.started || false;
+        
+        // Only update timeRemaining if timer has been started
+        if (timerStarted) {
+            if (timeRemaining === null || (room.timeRemaining && Math.abs(timeRemaining - room.timeRemaining) > 10000)) {
+                timeRemaining = room.timeRemaining;
+            }
+        } else {
+            // Timer not started, don't show countdown
+            timeRemaining = null;
         }
         
         // Store current username from server response
@@ -152,27 +212,62 @@ async function loadRoomData() {
         // Show creator actions if user is creator
         if (isCreator) {
             document.getElementById('creatorActions').style.display = 'block';
+            // Show/hide start button
+            const startBtn = document.getElementById('startTimerBtn');
+            if (startBtn) {
+                if (timerStarted || !room.timeLimit) {
+                    startBtn.style.display = 'none';
+                } else {
+                    startBtn.style.display = 'inline-block';
+                }
+            }
         }
         
         // Update participant count and list
         updateParticipantCount(room.participantCount, room.participantLimit);
         updateParticipantsList(room.participants);
         
-        // Check if room is terminated
-        if (room.terminated) {
+        // Store room terminated status globally
+        const wasTerminated = window.roomTerminated || false;
+        const isTerminated = room.terminated || false;
+        window.roomTerminated = isTerminated;
+        
+        // Check if room is terminated - only show modal if status changed from false to true
+        // This prevents showing modal every time page loads or refreshes
+        if (isTerminated && !wasTerminated) {
+            // Only show modal if status just changed to terminated (transition from false to true)
+            terminatedModalShown = true;
             RetroToolCommon.showModal('terminatedModal');
+            
             // Stop the timer
             if (timeInterval) {
                 clearInterval(timeInterval);
                 timeInterval = null;
             }
             timeRemaining = 0;
+            timerStarted = false;
             updateTimer();
             
-            // Disable all input fields
+            // Disable all input fields (except modal buttons and export button)
+            document.querySelectorAll('textarea, button').forEach(el => {
+                // Check if button has onclick="exportSelected()" or data attribute
+                const isExportButton = el.getAttribute('onclick') && el.getAttribute('onclick').includes('exportSelected');
+                if (!el.classList.contains('modal') && !el.closest('.modal') && el.id !== 'startTimerBtn' && !isExportButton) {
+                    el.disabled = true;
+                } else if (isExportButton) {
+                    // Make sure export button stays enabled
+                    el.disabled = false;
+                }
+            });
+        } else {
+            // Room is not terminated, reset terminated flag and close modal
+            terminatedModalShown = false;
+            window.roomTerminated = false;
+            RetroToolCommon.closeModal('terminatedModal');
+            // Re-enable input fields
             document.querySelectorAll('textarea, button').forEach(el => {
                 if (!el.classList.contains('modal') && !el.closest('.modal')) {
-                    el.disabled = true;
+                    el.disabled = false;
                 }
             });
         }
@@ -242,6 +337,7 @@ function addEntryToDOM(category, entry, isInitial = false) {
     // Add draft/published styling
     let publishButton = '';
     let draftIndicator = '';
+    let editDeleteButtons = '';
     
     if (isOwnEntry) {
         if (entry.published) {
@@ -258,6 +354,57 @@ function addEntryToDOM(category, entry, isInitial = false) {
                 ${entry.published ? '🔓 ' + RetroToolCommon.getText('unpublish', 'Geri Al') : '📢 ' + RetroToolCommon.getText('publish', 'Yayınla')}
             </button>
         `;
+        
+        // Add edit and delete buttons for own entries
+        editDeleteButtons = `
+            <div class="entry-actions">
+                ${!entry.published ? `<button class="edit-btn" onclick="editEntry('${category}', '${entry.id}', ${JSON.stringify(entry.text).replace(/"/g, '&quot;')})" title="${RetroToolCommon.getText('edit', 'Düzenle')}">✏️</button>` : ''}
+                <button class="delete-btn" onclick="deleteEntry('${category}', '${entry.id}')" title="${RetroToolCommon.getText('delete', 'Sil')}">🗑️</button>
+            </div>
+        `;
+    }
+    
+    // Rating display - only show for published entries
+    // Only owner sees average ratings, others can rate after retro ends
+    let ratingDisplay = '';
+    const retroEnded = (timeRemaining === 0 && timerStarted) || window.roomTerminated || false;
+    const canShowRatings = isCreator && retroEnded && entry.published;
+    const canRate = !isOwnEntry && entry.published && retroEnded;
+    
+    if (canShowRatings) {
+        // Calculate average rating excluding entry owner
+        let averageRating = 0;
+        if (entry.ratings && Object.keys(entry.ratings).length > 0) {
+            const ratingsArray = Object.entries(entry.ratings)
+                .filter(([username]) => username !== entry.username)
+                .map(([, rating]) => rating);
+            if (ratingsArray.length > 0) {
+                averageRating = ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length;
+            }
+        }
+        
+        ratingDisplay = `
+            <div class="entry-rating">
+                <span class="rating-average">${RetroToolCommon.getText('average', 'Ortalama')}: ${averageRating.toFixed(1)}</span>
+            </div>
+        `;
+    } else if (canRate) {
+        // Show rating stars for other users' published entries after retro ends
+        const currentUserRating = entry.ratings && entry.ratings[getCurrentUsername()] ? entry.ratings[getCurrentUsername()] : 0;
+        ratingDisplay = `
+            <div class="entry-rating">
+                <div class="rating-stars" data-entry-id="${entry.id}" data-category="${category}">
+                    ${[1, 2, 3, 4, 5].map(star => `
+                        <span class="star ${star <= currentUserRating ? 'filled' : ''}" 
+                              data-rating="${star}" 
+                              onclick="rateEntry('${category}', '${entry.id}', ${star})"
+                              title="${star} ${RetroToolCommon.getText('stars', 'yıldız')}">
+                            ${star <= currentUserRating ? '⭐' : '☆'}
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+        `;
     }
     
     entryElement.innerHTML = `
@@ -267,7 +414,9 @@ function addEntryToDOM(category, entry, isInitial = false) {
             ${draftIndicator}
             ${isCreator ? `<input type="checkbox" class="entry-checkbox" ${entry.selected ? 'checked' : ''} onchange="toggleEntry('${category}', '${entry.id}')">` : ''}
         </div>
+        ${ratingDisplay}
         ${publishButton}
+        ${editDeleteButtons}
     `;
     
     entriesContainer.appendChild(entryElement);
@@ -302,7 +451,11 @@ function removeEntryFromDOM(category, entryId) {
 // Update existing entry in DOM
 function updateEntryInDOM(category, entry) {
     const entryElement = document.querySelector(`[data-entry-id="${entry.id}"]`);
-    if (!entryElement) return;
+    if (!entryElement) {
+        // Entry doesn't exist in DOM, add it
+        addEntryToDOM(category, entry);
+        return;
+    }
     
     // Check if this is current user's entry
     const isOwnEntry = entry.username === getCurrentUsername();
@@ -356,6 +509,92 @@ function updateEntryInDOM(category, entry) {
                 draftIndicator.className = 'draft-indicator';
             }
         }
+        
+        // Update edit/delete buttons
+        let entryActions = entryElement.querySelector('.entry-actions');
+        if (!entryActions && isOwnEntry) {
+            // Create actions container if it doesn't exist
+            entryActions = document.createElement('div');
+            entryActions.className = 'entry-actions';
+            entryElement.appendChild(entryActions);
+        }
+        
+        if (entryActions) {
+            entryActions.innerHTML = '';
+            if (!entry.published) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = '✏️';
+                editBtn.title = RetroToolCommon.getText('edit', 'Düzenle');
+                editBtn.onclick = () => editEntry(category, entry.id, entry.text);
+                entryActions.appendChild(editBtn);
+            }
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.title = RetroToolCommon.getText('delete', 'Sil');
+            deleteBtn.onclick = () => deleteEntry(category, entry.id);
+            entryActions.appendChild(deleteBtn);
+        }
+        
+        // Update entry content
+        const entryContent = entryElement.querySelector('.entry-content');
+        if (entryContent) {
+            entryContent.textContent = entry.text;
+        }
+        
+        // Update rating display - ALWAYS update when entry changes
+        // Get current retro ended status from multiple sources
+        const retroEnded = (timeRemaining === 0 && timerStarted) || window.roomTerminated || false;
+        const canShowRatings = isCreator && retroEnded && entry.published;
+        const canRate = !isOwnEntry && entry.published && retroEnded;
+        
+        // Always update rating container if entry is published and retro has ended
+        let ratingContainer = entryElement.querySelector('.entry-rating');
+        if ((canShowRatings || canRate) && entry.published) {
+            if (!ratingContainer) {
+                ratingContainer = document.createElement('div');
+                ratingContainer.className = 'entry-rating';
+                // Insert before publish button or at end
+                const publishBtn = entryElement.querySelector('.publish-btn');
+                if (publishBtn) {
+                    entryElement.insertBefore(ratingContainer, publishBtn);
+                } else {
+                    entryElement.appendChild(ratingContainer);
+                }
+            }
+            
+            if (canShowRatings) {
+                // Show average rating for owner
+                let averageRating = 0;
+                if (entry.ratings && Object.keys(entry.ratings).length > 0) {
+                    const ratingsArray = Object.entries(entry.ratings)
+                        .filter(([username]) => username !== entry.username)
+                        .map(([, rating]) => rating);
+                    if (ratingsArray.length > 0) {
+                        averageRating = ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length;
+                    }
+                }
+                ratingContainer.innerHTML = `<span class="rating-average">${RetroToolCommon.getText('average', 'Ortalama')}: ${averageRating.toFixed(1)}</span>`;
+            } else if (canRate) {
+                // Show rating stars for others - ALWAYS update with latest rating data
+                const currentUserRating = entry.ratings && entry.ratings[getCurrentUsername()] ? entry.ratings[getCurrentUsername()] : 0;
+                ratingContainer.innerHTML = `
+                    <div class="rating-stars" data-entry-id="${entry.id}" data-category="${category}">
+                        ${[1, 2, 3, 4, 5].map(star => `
+                            <span class="star ${star <= currentUserRating ? 'filled' : ''}" 
+                                  data-rating="${star}" 
+                                  onclick="rateEntry('${category}', '${entry.id}', ${star})"
+                                  title="${star} ${RetroToolCommon.getText('stars', 'yıldız')}">
+                                ${star <= currentUserRating ? '⭐' : '☆'}
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        } else if (ratingContainer && !canShowRatings && !canRate) {
+            ratingContainer.remove();
+        }
     }
     
     // Update checkbox state for creators
@@ -384,6 +623,125 @@ async function togglePublish(category, entryId, isCurrentlyPublished) {
         } else {
             RetroToolCommon.showSuccess(RetroToolCommon.getText('entry_unpublished', 'Giriş taslağa alındı!'));
         }
+        
+    } catch (error) {
+        RetroToolCommon.showError(error.message);
+    }
+}
+
+// Delete entry
+async function deleteEntry(category, entryId) {
+    if (!confirm(RetroToolCommon.getText('delete_entry_confirm', 'Bu girişi silmek istediğinizden emin misiniz?'))) {
+        return;
+    }
+    
+    try {
+        await RetroToolCommon.apiRequest(`/api/room/${roomCode}/entry/${entryId}`, {
+            method: 'DELETE'
+        });
+        
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('entry_deleted', 'Giriş silindi!'));
+        // Socket event will handle DOM removal
+        
+    } catch (error) {
+        RetroToolCommon.showError(error.message);
+    }
+}
+
+// Edit entry - show modal instead of prompt
+function editEntry(category, entryId, currentText) {
+    // Set the current values to the modal inputs
+    document.getElementById('editEntryInput').value = currentText;
+    document.getElementById('editEntryId').value = entryId;
+    document.getElementById('editEntryCategory').value = category;
+    
+    // Show the modal
+    RetroToolCommon.showModal('editEntryModal');
+    
+    // Focus on the textarea
+    setTimeout(() => {
+        const textarea = document.getElementById('editEntryInput');
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }, 100);
+}
+
+// Confirm edit entry from modal
+function confirmEditEntry() {
+    const entryId = document.getElementById('editEntryId').value;
+    const category = document.getElementById('editEntryCategory').value;
+    const newText = document.getElementById('editEntryInput').value.trim();
+    
+    if (!newText) {
+        RetroToolCommon.showError(RetroToolCommon.getText('enter_text', 'Lütfen bir metin girin'));
+        return;
+    }
+    
+    // Close the modal
+    RetroToolCommon.closeModal('editEntryModal');
+    
+    // Update the entry
+    updateEntry(category, entryId, newText);
+}
+
+// Update entry on server
+async function updateEntry(category, entryId, text) {
+    try {
+        await RetroToolCommon.apiRequest(`/api/room/${roomCode}/entry/${entryId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                text: text
+            })
+        });
+        
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('entry_updated', 'Giriş güncellendi!'));
+        // Socket event will handle DOM update
+        
+    } catch (error) {
+        RetroToolCommon.showError(error.message);
+    }
+}
+
+// Rate entry
+async function rateEntry(category, entryId, rating) {
+    // Check if retro has ended
+    const isRetroEnded = (timeRemaining === 0 && timerStarted) || window.roomTerminated || false;
+    
+    // Get room data to check terminated status
+    try {
+        const roomResponse = await RetroToolCommon.apiRequest(`/api/room/${roomCode}`);
+        const room = roomResponse.room;
+        const retroEnded = (room.timeRemaining === 0 && room.started) || room.terminated;
+        
+        // Update global terminated status
+        window.roomTerminated = room.terminated || false;
+        
+        if (!retroEnded) {
+            RetroToolCommon.showError(RetroToolCommon.getText('ratings_only_after_end', 'Puan verme sadece retrospektif bittikten sonra yapılabilir'));
+            return;
+        }
+    } catch (error) {
+        RetroToolCommon.showError(error.message);
+        return;
+    }
+    
+    try {
+        const response = await RetroToolCommon.apiRequest(`/api/room/${roomCode}/entry/${entryId}/rate`, {
+            method: 'POST',
+            body: JSON.stringify({
+                rating: rating
+            })
+        });
+        
+        // Socket event will handle DOM update automatically
+        // But also manually trigger update to ensure rating is visible immediately
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('rating_added', 'Puan verildi!'));
+        
+        // Force refresh the entry to show updated rating
+        // Socket event should handle this, but we ensure it's updated
+        setTimeout(() => {
+            loadRoomData();
+        }, 100);
         
     } catch (error) {
         RetroToolCommon.showError(error.message);
@@ -428,6 +786,13 @@ function updateParticipantsList(participants) {
 
 // Update timer display - now server-side driven
 function updateTimer() {
+    // Only show timer if it has been started
+    if (!timerStarted) {
+        const timeElement = document.getElementById('timeRemaining');
+        timeElement.textContent = '';
+        return;
+    }
+    
     // Only update display, don't countdown locally
     if (timeRemaining !== null && timeRemaining > 0) {
         const timeElement = document.getElementById('timeRemaining');
@@ -436,11 +801,15 @@ function updateTimer() {
         // If no time limit, don't show timer
         const timeElement = document.getElementById('timeRemaining');
         timeElement.textContent = '';
-    } else if (timeRemaining === 0) {
-        // Time expired
+    } else if (timeRemaining === 0 && !timeExpiredModalShown) {
+        // Time expired - show modal only once
+        window.roomTerminated = true; // Mark as ended for rating purposes
         const timeElement = document.getElementById('timeRemaining');
         timeElement.textContent = '';
+        timeExpiredModalShown = true;
         RetroToolCommon.showModal('timeExpiredModal');
+        // Reload entries to show ratings
+        loadRoomData();
     }
 }
 
@@ -448,8 +817,26 @@ function updateTimer() {
 async function updateTimerFromServer() {
     try {
         const response = await RetroToolCommon.apiRequest(`/api/room/${roomCode}/timer`);
-        if (response.timeRemaining !== timeRemaining) {
+        
+        // Update started status
+        if (response.started !== timerStarted) {
+            timerStarted = response.started || false;
+            const startBtn = document.getElementById('startTimerBtn');
+            if (startBtn && isCreator) {
+                if (timerStarted || !response.timeLimit) {
+                    startBtn.style.display = 'none';
+                } else {
+                    startBtn.style.display = 'inline-block';
+                }
+            }
+        }
+        
+        // Only update time remaining if timer has been started
+        if (timerStarted && response.timeRemaining !== timeRemaining) {
             timeRemaining = response.timeRemaining;
+            updateTimer();
+        } else if (!timerStarted) {
+            timeRemaining = null;
             updateTimer();
         }
         
@@ -458,11 +845,35 @@ async function updateTimerFromServer() {
             clearInterval(timeInterval);
             timeInterval = null;
             timeRemaining = 0;
+            timerStarted = false;
             updateTimer();
         }
     } catch (error) {
         // Silent fail - timer will continue with current value
         console.warn('Failed to update timer from server:', error);
+    }
+}
+
+// Start timer (creator only)
+async function startTimer() {
+    if (!isCreator) return;
+    
+    try {
+        await RetroToolCommon.apiRequest(`/api/room/${roomCode}/start`, {
+            method: 'POST'
+        });
+        
+        RetroToolCommon.showSuccess(RetroToolCommon.getText('timer_started', 'Süre başlatıldı!'));
+        timerStarted = true;
+        const startBtn = document.getElementById('startTimerBtn');
+        if (startBtn) {
+            startBtn.style.display = 'none';
+        }
+        // Refresh room data to get updated timer
+        loadRoomData();
+        
+    } catch (error) {
+        RetroToolCommon.showError(error.message);
     }
 }
 
@@ -658,6 +1069,12 @@ async function exportSelected() {
 // Close modal
 function closeModal(modalId) {
     RetroToolCommon.closeModal(modalId);
+}
+
+// Close time expired modal
+function closeTimeExpiredModal() {
+    timeExpiredModalShown = false;
+    RetroToolCommon.closeModal('timeExpiredModal');
 }
 
 // Handle Enter key in textareas

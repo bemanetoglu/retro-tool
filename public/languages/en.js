@@ -71,6 +71,7 @@ const en = {
     "participants": "Participants",
     "no_participants": "No participants yet",
     "room_owner": "Owner",
+    "start_timer": "Start Timer",
     "extend_time": "Extend Time",
     "reopen_room": "Reopen Room",
     "terminate_retro": "Terminate Retro",
@@ -147,7 +148,20 @@ const en = {
     "participant_limit_error": "Participant limit must be between 1-50",
     "time_limit_error": "Time limit must be between 1-300 minutes",
     "username_validation_error": "Username must be 2-20 characters and contain only letters, numbers, and spaces",
-    "characters": "characters"
+    "characters": "characters",
+    "timer_started": "Timer started!",
+    "delete_entry_confirm": "Are you sure you want to delete this entry?",
+    "edit_entry_prompt": "Edit entry:",
+    "edit_entry": "Edit Entry",
+    "edit_entry_placeholder": "Edit your entry...",
+    "entry_deleted": "Entry deleted!",
+    "entry_updated": "Entry updated!",
+    "rating_added": "Rating added!",
+    "cannot_rate_own_entry": "You cannot rate your own entry",
+    "can_only_rate_published": "You can only rate published entries",
+    "ratings_only_after_end": "Ratings can only be given after the retrospective ends",
+    "stars": "stars",
+    "average": "Average"
 };
 
 // Export for use in other files
