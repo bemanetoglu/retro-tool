@@ -1,18 +1,17 @@
 {
   "status": "commited",
-  "type": "backend",
+  "type": "frontend",
   "scope": "codebase",
   "localEndpoint": "http://localhost:3000",
-  "backendAuthType": "public",
   "executionArgs": {
     "projectName": "retro-tool",
     "projectPath": "d:\\projects\\retro-tool",
     "testIds": [],
-    "additionalInstruction": "",
+    "additionalInstruction": "This app has NO login page. Users join rooms by entering a username on /join/:code page. The room creator is auto-joined as 'Oda Sahibi'. To test the retro board, first create a room via /create-room, then navigate to /room/:code. Skip any steps that reference /login or LOGIN_USER/LOGIN_PASSWORD.",
     "serverMode": "production",
     "envs": {
       "API_KEY": "sk-user-wwT1EFT25I4FTivpSEXzvp_yzAdeWQECF_3vrotvGNvQWIo7YOkJenGnuIAyrBwF-adXq4-859O2xZb_tb0Fq8dmEazHE7Jzm8s0XEy2qfPWq5bN5mjVmrQ71cjBvpUuiLI"
     }
   },
-  "serverPort": 58857
+  "serverPort": 62725
 }

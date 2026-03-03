@@ -7,12 +7,11 @@
 | **Proje** | Retro Tool |
 | **Versiyon** | 1.0.0 |
 | **Test Tarihi** | 2026-03-02 |
-| **Test Aracı** | Jest v29 + Supertest + Socket.IO Client |
-| **Test Kapsamı** | Backend API & WebSocket |
-| **Test Planı Kaynağı** | TestSprite MCP (10 test case) |
-| **Toplam Test** | 76 |
-| **Geçen** | 76 (100%) |
-| **Başarısız** | 0 |
+| **Test Aracı** | Jest v29 + Supertest + Socket.IO Client / TestSprite MCP |
+| **Test Kapsamı** | Backend API & WebSocket + Frontend E2E (plan) |
+| **Test Planı Kaynağı** | TestSprite MCP (10 backend + 33 frontend test case) |
+| **Backend Testler** | 76 test - 76 gecen (100%) |
+| **Frontend Testler** | 33 test planlandı - calıstırma ENGELLENDI (ağ kısıtlaması) |
 | **Bulunan Bug** | 1 (düzeltildi) |
 
 ---
@@ -224,12 +223,85 @@
 
 ---
 
-## 5. Riskler ve Eksik Alanlar
+## 5. Frontend Test Planı (TestSprite MCP - Tarayıcı Tabanlı)
+
+**Durum**: PLAN OLUŞTURULDU - Çalıştırma ENGELLENDI (ağ kısıtlaması)
+
+TestSprite MCP aracılığıyla 33 frontend E2E test case oluşturuldu. Ancak testlerin çalıştırılması, TestSprite bulut sunucusuna (`3.223.9.40:7300`) tünel bağlantısının kurumsal ağ güvenlik yazılımı tarafından engellenmesi nedeniyle gerçekleştirilemedi (`EACCES` hatası).
+
+**Oluşturulan Test Planı**: `testsprite_tests/testsprite_frontend_test_plan.json`
+
+### FREQ-001: Ana Sayfa Navigasyonu (Home Page Navigation)
+**Durum**: ⏳ PLAN HAZIR (7 test case)
+
+| Test ID | Test Adı | Oncelik | Durum |
+|---------|----------|---------|-------|
+| TC001 | Geçerli 6 haneli oda koduyla odaya katılma | High | ⏳ Beklemede |
+| TC002 | Oda oluşturma linkine tıklayarak navigasyon | High | ⏳ Beklemede |
+| TC003 | 6 haneden kısa oda kodu doğrulama hatası | High | ⏳ Beklemede |
+| TC004 | 6 haneden uzun oda kodu doğrulama hatası | Medium | ⏳ Beklemede |
+| TC005 | Boş oda kodu doğrulama hatası | High | ⏳ Beklemede |
+| TC006 | Başında sıfır olan oda kodu kabul edilmesi | Low | ⏳ Beklemede |
+| TC007 | Enter tuşuyla odaya katılma | Medium | ⏳ Beklemede |
+
+### FREQ-002: Oda Oluşturma (Create Room)
+**Durum**: ⏳ PLAN HAZIR (8 test case)
+
+| Test ID | Test Adı | Oncelik | Durum |
+|---------|----------|---------|-------|
+| TC008 | Sadece oda adıyla oda oluşturma ve odaya girme | High | ⏳ Beklemede |
+| TC009 | Katılımcı limiti ve süre limiti ile oda oluşturma | High | ⏳ Beklemede |
+| TC010 | Zaman limiti önayar butonu kullanma (30 dk) | Medium | ⏳ Beklemede |
+| TC011 | Başarı modalından davet linkini kopyalama | Medium | ⏳ Beklemede |
+| TC012 | Oda adı çok kısa (1 karakter) doğrulama hatası | High | ⏳ Beklemede |
+| TC013 | Oda adı çok uzun (51 karakter) doğrulama hatası | Medium | ⏳ Beklemede |
+| TC014 | Katılımcı limiti > 50 doğrulama hatası | High | ⏳ Beklemede |
+| TC015 | Süre limiti > 300 dakika doğrulama hatası | Medium | ⏳ Beklemede |
+
+### FREQ-003: Retrospektif Tahta (Retro Board)
+**Durum**: ⏳ PLAN HAZIR (8 test case)
+
+| Test ID | Test Adı | Oncelik | Durum |
+|---------|----------|---------|-------|
+| TC016 | Mad/Sad/Glad sütunları ve sayaçlar görünümü | High | ⏳ Beklemede |
+| TC017 | Mad taslak girişi Add butonuyla oluşturma | High | ⏳ Beklemede |
+| TC018 | Sad taslak girişi Enter tuşuyla oluşturma | Medium | ⏳ Beklemede |
+| TC019 | Taslak girişi düzenleme ve kaydetme | High | ⏳ Beklemede |
+| TC020 | Taslak girişi silme | Medium | ⏳ Beklemede |
+| TC021 | Taslak girişi yayınlama (publish) | High | ⏳ Beklemede |
+| TC022 | Yayınlanmış girişi geri alma (unpublish) | Medium | ⏳ Beklemede |
+| TC023 | 500 karakterden uzun giriş engelleme | High | ⏳ Beklemede |
+
+### FREQ-004: Giriş Puanlama (Entry Rating)
+**Durum**: ⏳ PLAN HAZIR (4 test case)
+
+| Test ID | Test Adı | Oncelik | Durum |
+|---------|----------|---------|-------|
+| TC024 | Retro bittikten sonra başka kullanıcının girişini puanlama (5 yıldız) | High | ⏳ Beklemede |
+| TC025 | Kendi girişini puanlama engeli | High | ⏳ Beklemede |
+| TC026 | Retro bitmeden puanlama engeli | High | ⏳ Beklemede |
+| TC027 | Puanlama arayüzünde 1-5 yıldız sınırı | Medium | ⏳ Beklemede |
+
+### FREQ-005: Dil Değiştirme (Language Switching)
+**Durum**: ⏳ PLAN HAZIR (6 test case)
+
+| Test ID | Test Adı | Oncelik | Durum |
+|---------|----------|---------|-------|
+| TC028 | İngilizce'ye geçiş ve UI güncellenmesi | High | ⏳ Beklemede |
+| TC029 | İspanyolca'ya geçiş ve UI güncellenmesi | Medium | ⏳ Beklemede |
+| TC030 | Türkçe'ye geçiş ve UI güncellenmesi | Medium | ⏳ Beklemede |
+| TC031 | Dil seçiminin sayfa geçişlerinde korunması | High | ⏳ Beklemede |
+| TC032 | Desteklenmeyen dil için Türkçe'ye geri dönüş | Low | ⏳ Beklemede |
+| TC033 | Hızlı dil değiştirmede son seçilen dilin geçerli olması | Medium | ⏳ Beklemede |
+
+---
+
+## 6. Riskler ve Eksik Alanlar
 
 | Risk/Eksik | Açıklama | Önem |
 |------------|----------|------|
+| **TestSprite Bulut Tüneli** | TestSprite'ın tarayıcı tabanlı test çalıştırma servisi (`3.223.9.40:7300`) kurumsal ağdan erişilemiyor. 33 frontend E2E test planı hazır ancak çalıştırılamıyor. | Yuksek |
 | **Socket.IO olay kapsamı** | 12 socket olayından sadece `roomState` tam test edildi. `newEntry`, `entryToggled`, `participantUpdate`, `timeExpired` gibi olaylar doğrudan test edilmedi. | Orta |
-| **Frontend testleri** | Frontend JavaScript dosyaları (common.js, room.js vb.) için unit testleri yok. | Orta |
 | **Eşzamanlılık testleri** | Birden fazla eşzamanlı kullanıcının aynı anda işlem yapması test edilmedi. | Düşük |
 | **Bellek sızıntısı** | In-memory depolama kullanıldığından uzun süreli çalışmada bellek sızıntısı riski var. | Düşük |
 | **Güvenlik testleri** | Session hijacking, XSS injection gibi güvenlik testleri yapılmadı. | Orta |
